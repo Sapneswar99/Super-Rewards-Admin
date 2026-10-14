@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Super Rewards Admin</title>
+  <meta name="description" content="Admin settings and configuration">
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- FAVICON -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta name="theme-color" content="#0a0d14">
+
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-app">
+
+  <!-- ═══════════════════════════════════════
+       TOP NAVBAR
+       ═══════════════════════════════════════ -->
+  <nav class="admin-navbar">
+    <a href="index.html" class="admin-nav-brand">
+      <span class="admin-nav-logo">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="#7c3aed" opacity="0.18"/>
+          <circle cx="50" cy="50" r="44" fill="#0a0d14" opacity="0.55"/>
+          <circle cx="50" cy="50" r="40" fill="#0a0d14" opacity="0.85"/>
+          <circle cx="50" cy="50" r="36" fill="#0a0d14"/>
+          <circle cx="50" cy="50" r="34" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.15"/>
+          <text x="50" y="68" text-anchor="middle"
+                font-family="Arial Black, Arial, sans-serif"
+                font-weight="900" font-size="52" fill="#ffffff">S</text>
+        </svg>
+      </span>
+      <span class="admin-nav-title">
+        <span class="admin-nav-title-main">Super Rewards</span>
+        <span class="admin-nav-title-sub">Admin Panel</span>
+      </span>
+    </a>
+
+    <div class="admin-nav-right">
+      <span class="admin-user-badge" id="adminUserEmail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>Loading...</span>
+      </span>
+      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span>Logout</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       MAIN CONTENT
+       ═══════════════════════════════════════ -->
+  <main class="admin-main">
+
+    <!-- Page Header -->
+    <div class="admin-page-header">
+      <div>
+        <h1 class="admin-page-title">Settings</h1>
+        <p class="admin-page-sub">Configure platform settings</p>
+      </div>
+      <div class="admin-refresh-btn" id="refreshBtn" title="Reload settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COIN SYSTEM
+         ═══════════════════════════════════════ -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2 class="admin-section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+            <line x1="12" y1="6" x2="12" y2="18"/>
+          </svg>
+          Coin System
+        </h2>
+      </div>
+
+      <div class="admin-settings-form">
+
+        <div class="admin-settings-row">
+          <div class="admin-settings-label">
+            <label for="settingsCoinRate">Coins per ₹1</label>
+            <span class="admin-settings-hint">How many coins equal 1 rupee</span>
+          </div>
+          <input
+            type="number"
+            id="settingsCoinRate"
+            class="admin-settings-input"
+            placeholder="100"
+            min="1"
+            inputmode="numeric">
+        </div>
+
+        <div class="admin-settings-row">
+          <div class="admin-settings-label">
+            <label for="settingsMinWithdraw">Minimum Withdrawal (Coins)</label>
+            <span class="admin-settings-hint">Minimum coins required to withdraw</span>
+          </div>
+          <input
+            type="number"
+            id="settingsMinWithdraw"
+            class="admin-settings-input"
+            placeholder="1000"
+            min="100"
+            step="100"
+            inputmode="numeric">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         OFFERWALL SETTINGS
+         ═══════════════════════════════════════ -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2 class="admin-section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+          Offerwall Settings
+        </h2>
+      </div>
+
+      <div class="admin-settings-form">
+
+        <div class="admin-settings-row">
+          <div class="admin-settings-label">
+            <label for="settingsCpxId">CPX Research App ID</label>
+            <span class="admin-settings-hint">Get from cpx-research.com dashboard</span>
+          </div>
+          <input
+            type="text"
+            id="settingsCpxId"
+            class="admin-settings-input"
+            placeholder="e.g. 12345"
+            autocomplete="off">
+        </div>
+
+        <div class="admin-settings-row">
+          <div class="admin-settings-label">
+            <label for="settingsAdgemId">AdGem App ID</label>
+            <span class="admin-settings-hint">Get from adgem.com dashboard</span>
+          </div>
+          <input
+            type="text"
+            id="settingsAdgemId"
+            class="admin-settings-input"
+            placeholder="e.g. 67890"
+            autocomplete="off">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         MAINTENANCE MODE
+         ═══════════════════════════════════════ -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2 class="admin-section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          Platform Status
+        </h2>
+      </div>
+
+      <div class="admin-settings-form">
+
+        <div class="admin-settings-row">
+          <div class="admin-settings-label">
+            <label for="settingsMaintenance">Maintenance Mode</label>
+            <span class="admin-settings-hint">Block new registrations temporarily</span>
+          </div>
+          <label class="admin-toggle">
+            <input type="checkbox" id="settingsMaintenance">
+            <span class="admin-toggle-slider"></span>
+          </label>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         SAVE BUTTON
+         ═══════════════════════════════════════ -->
+    <div class="admin-settings-actions">
+      <button class="admin-save-btn" id="saveSettingsBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        <span>Save Settings</span>
+      </button>
+
+      <p class="admin-save-msg" id="saveMsg"></p>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         ADMIN INFO
+         ═══════════════════════════════════════ -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2 class="admin-section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          Admin Info
+        </h2>
+      </div>
+
+      <div class="admin-settings-form">
+
+        <div class="admin-settings-row">
+          <div class="admin-settings-label">
+            <label>Admin Email</label>
+          </div>
+          <strong class="admin-info-value" id="adminInfoEmail">—</strong>
+        </div>
+
+        <div class="admin-settings-row">
+          <div class="admin-settings-label">
+            <label>Last Login</label>
+          </div>
+          <strong class="admin-info-value" id="adminInfoLastLogin">—</strong>
+        </div>
+
+        <div class="admin-settings-row">
+          <div class="admin-settings-label">
+            <label>Panel Version</label>
+          </div>
+          <strong class="admin-info-value">v1.0.0</strong>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         DANGER ZONE
+         ═══════════════════════════════════════ -->
+    <div class="admin-section admin-danger-section">
+      <div class="admin-section-header">
+        <h2 class="admin-section-title admin-danger-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          Danger Zone
+        </h2>
+      </div>
+
+      <div class="admin-danger-actions">
+        <button class="admin-danger-btn" id="clearCacheBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2l-1-14"/>
+            <path d="M10 11v6M14 11v6"/>
+          </svg>
+          <span>Clear Local Cache</span>
+        </button>
+
+        <button class="admin-danger-btn" id="signOutAllBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span>Sign Out from All Devices</span>
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════
+       BOTTOM NAVIGATION BAR (Mobile)
+       ═══════════════════════════════════════ -->
+  <nav class="admin-bottom-nav">
+    <a href="index.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="withdrawals.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="6" width="20" height="12" rx="2"/>
+        <path d="M2 10h20"/>
+        <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
+      </svg>
+      <span>Withdrawals</span>
+      <span class="admin-nav-badge" id="navPendingBadge">0</span>
+    </a>
+
+    <a href="users.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <span>Users</span>
+    </a>
+
+    <a href="transactions.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      <span>History</span>
+    </a>
+  </nav>
+
+  <!-- Loading Overlay -->
+  <div id="adminLoading" class="admin-loading hidden">
+    <div class="admin-loading-spinner"></div>
+    <p class="admin-loading-text">Saving...</p>
+  </div>
+
+  <script type="module" src="js/settings.js"></script>
+
+</body>
+</html>
