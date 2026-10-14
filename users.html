@@ -46,7 +46,7 @@
         </svg>
         <span>Loading...</span>
       </span>
-      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout">
+      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
           <polyline points="16 17 21 12 16 7"/>
@@ -235,7 +235,7 @@
 
       <div class="admin-sheet-header">
         <h2>User Details</h2>
-        <button class="admin-sheet-close" id="userSheetClose">×</button>
+        <button class="admin-sheet-close" id="userSheetClose" type="button">×</button>
       </div>
 
       <div class="admin-sheet-body">
@@ -281,7 +281,7 @@
         <!-- Actions -->
         <div class="admin-user-actions">
 
-          <button class="admin-action-btn admin-action-coins" id="btnAddCoins">
+          <button class="admin-action-btn admin-action-coins" id="btnAddCoins" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -289,7 +289,7 @@
             <span>Add Coins</span>
           </button>
 
-          <button class="admin-action-btn admin-action-edit-coins" id="btnSetCoins">
+          <button class="admin-action-btn admin-action-edit-coins" id="btnSetCoins" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -297,7 +297,7 @@
             <span>Set Coins</span>
           </button>
 
-          <button class="admin-action-btn admin-action-ban" id="btnToggleBan">
+          <button class="admin-action-btn admin-action-ban" id="btnToggleBan" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
@@ -320,7 +320,7 @@
 
       <div class="admin-sheet-header">
         <h2 id="coinsSheetTitle">Add Coins</h2>
-        <button class="admin-sheet-close" id="coinsSheetClose">×</button>
+        <button class="admin-sheet-close" id="coinsSheetClose" type="button">×</button>
       </div>
 
       <div class="admin-sheet-body">
@@ -369,6 +369,10 @@
     <p class="admin-loading-text">Processing...</p>
   </div>
 
+  <!-- ═══════════════════════════════════════
+       SCRIPTS — auth.js PEHLE, users.js BAAD MEIN
+       ═══════════════════════════════════════ -->
+  <script type="module" src="js/auth.js"></script>
   <script type="module" src="js/users.js"></script>
 
 </body>
