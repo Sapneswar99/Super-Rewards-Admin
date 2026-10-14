@@ -41,7 +41,7 @@
       <h2 class="admin-login-heading">Welcome Back</h2>
       <p class="admin-login-sub">Sign in to access admin controls</p>
 
-      <form id="adminLoginForm" class="admin-login-form">
+      <form id="adminLoginForm" class="admin-login-form" autocomplete="on">
 
         <!-- Email -->
         <div class="admin-input-group">
@@ -56,6 +56,7 @@
             <input
               type="email"
               id="adminEmail"
+              name="email"
               placeholder="admin@example.com"
               autocomplete="email"
               required>
@@ -75,6 +76,7 @@
             <input
               type="password"
               id="adminPassword"
+              name="password"
               placeholder="Enter your password"
               autocomplete="current-password"
               required>
@@ -137,6 +139,7 @@
     <p class="admin-loading-text">Verifying credentials...</p>
   </div>
 
+  <!-- Script -->
   <script type="module" src="js/auth.js"></script>
 
 </body>
