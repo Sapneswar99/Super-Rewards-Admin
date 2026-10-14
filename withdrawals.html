@@ -46,7 +46,7 @@
         </svg>
         <span>Loading...</span>
       </span>
-      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout">
+      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
           <polyline points="16 17 21 12 16 7"/>
@@ -167,7 +167,7 @@
 
       <div class="admin-sheet-header">
         <h2 id="approveSheetTitle">Approve Withdrawal</h2>
-        <button class="admin-sheet-close" id="approveSheetClose">×</button>
+        <button class="admin-sheet-close" id="approveSheetClose" type="button">×</button>
       </div>
 
       <div class="admin-sheet-body">
@@ -225,7 +225,7 @@
 
       <div class="admin-sheet-header">
         <h2>Reject Withdrawal</h2>
-        <button class="admin-sheet-close" id="rejectSheetClose">×</button>
+        <button class="admin-sheet-close" id="rejectSheetClose" type="button">×</button>
       </div>
 
       <div class="admin-sheet-body">
@@ -282,6 +282,10 @@
     <p class="admin-loading-text">Processing...</p>
   </div>
 
+  <!-- ═══════════════════════════════════════
+       SCRIPTS — auth.js PEHLE, withdrawals.js BAAD MEIN
+       ═══════════════════════════════════════ -->
+  <script type="module" src="js/auth.js"></script>
   <script type="module" src="js/withdrawals.js"></script>
 
 </body>
