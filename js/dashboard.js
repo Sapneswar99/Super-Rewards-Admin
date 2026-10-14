@@ -1,6 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — DASHBOARD
    Stats + Recent Data + Pending Badge
+   v2 — Fixed auto-refresh leak + duplicate setup
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -58,6 +59,22 @@ function getMethodLabel(method) {
   return 'UPI';
 }
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/* ============================================
+   STATE
+   ============================================ */
+let isSetupDone = false;
+let autoRefreshTimer = null;
+
 /* ============================================
    LOAD STATS
    ============================================ */
@@ -96,8 +113,8 @@ async function loadStats() {
     const approvedSnap = await getDocs(approvedWQ);
 
     let totalPaid = 0;
-    approvedSnap.forEach((doc) => {
-      const data = doc.data();
+    approvedSnap.forEach((docSnap) => {
+      const data = docSnap.data();
       totalPaid += Number(data.amountINR) || 0;
     });
     setText('statTotalPaid', formatNumber(Math.floor(totalPaid)));
@@ -105,15 +122,14 @@ async function loadStats() {
     /* ----- 4. COINS IN CIRCULATION ----- */
     const allUsersSnap = await getDocs(usersColl);
     let totalCoins = 0;
-    allUsersSnap.forEach((doc) => {
-      const data = doc.data();
+    allUsersSnap.forEach((docSnap) => {
+      const data = docSnap.data();
       totalCoins += Number(data.coins) || 0;
     });
     setText('statTotalCoins', formatNumber(totalCoins));
 
   } catch (err) {
     console.error('Stats load error:', err);
-    // Show fallback values
     setText('statTotalUsers', '—');
     setText('statPendingWithdrawals', '—');
     setText('statTotalPaid', '—');
@@ -161,9 +177,9 @@ async function loadRecentWithdrawals() {
         <td>
           <div style="display:flex;align-items:center;gap:8px;">
             <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;">
-              ${getInitial(w.userName)}
+              ${escapeHtml(getInitial(w.userName))}
             </div>
-            <span>${w.userName || 'User'}</span>
+            <span>${escapeHtml(w.userName || 'User')}</span>
           </div>
         </td>
         <td>${methodLabel}</td>
@@ -221,12 +237,12 @@ async function loadRecentUsers() {
         <td>
           <div style="display:flex;align-items:center;gap:8px;">
             <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;">
-              ${getInitial(u.name)}
+              ${escapeHtml(getInitial(u.name))}
             </div>
-            <span>${u.name || 'User'}</span>
+            <span>${escapeHtml(u.name || 'User')}</span>
           </div>
         </td>
-        <td>${u.email || '—'}</td>
+        <td>${escapeHtml(u.email || '—')}</td>
         <td><strong style="color:#a78bfa;">${coins}</strong></td>
         <td>${date}</td>
       `;
@@ -239,8 +255,7 @@ async function loadRecentUsers() {
       <tr>
         <td colspan="4" style="text-align:center;color:#8b95a8;padding:32px;">
           Could not load users
-        </td>
-      </tr>`;
+        </tr>`;
   }
 }
 
@@ -256,17 +271,35 @@ async function refreshAll() {
 }
 
 /* ============================================
-   WAIT FOR ADMIN AUTH + LOAD DATA
+   STOP AUTO-REFRESH
    ============================================ */
-window.addEventListener('adminReady', async () => {
-  console.log('Admin ready — loading dashboard');
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+    console.log('[Dashboard] Auto-refresh stopped');
+  }
+}
+
+/* ============================================
+   SETUP DASHBOARD (Called ONCE after auth)
+   ============================================ */
+async function setupDashboard() {
+  if (isSetupDone) {
+    console.log('[Dashboard] Already setup — skipping');
+    return;
+  }
+  isSetupDone = true;
+
+  console.log('[Dashboard] Loading data...');
 
   // Load all data
   await refreshAll();
 
   /* ----- REFRESH BUTTON ----- */
   const refreshBtn = $('refreshBtn');
-  if (refreshBtn) {
+  if (refreshBtn && !refreshBtn.dataset.bound) {
+    refreshBtn.dataset.bound = '1';
     refreshBtn.addEventListener('click', async () => {
       refreshBtn.classList.add('spinning');
       try {
@@ -280,11 +313,31 @@ window.addEventListener('adminReady', async () => {
   }
 
   /* ----- AUTO REFRESH EVERY 60s ----- */
-  setInterval(() => {
-    // Only refresh if page is visible
+  stopAutoRefresh();
+  autoRefreshTimer = setInterval(() => {
     if (!document.hidden) {
       loadStats();
       loadRecentWithdrawals();
     }
   }, 60 * 1000);
+}
+
+/* ============================================
+   WAIT FOR ADMIN AUTH + LOAD DATA
+   ============================================ */
+window.addEventListener('adminReady', () => {
+  console.log('[Dashboard] adminReady event received');
+  setupDashboard();
+});
+
+/* ============================================
+   CLEANUP ON LOGOUT / PAGE UNLOAD
+   ============================================ */
+window.addEventListener('beforeunload', stopAutoRefresh);
+
+// Stop auto-refresh if user logs out
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    stopAutoRefresh();
+  }
 });
