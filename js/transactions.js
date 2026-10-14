@@ -1,6 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — TRANSACTIONS
    All transactions + Search + Filter + Pagination
+   v2 — Prevent duplicate setup + cleanup
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -10,8 +11,7 @@ import {
   orderBy,
   limit,
   startAfter,
-  getDocs,
-  where
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* ============================================
@@ -24,6 +24,7 @@ let hasMore = true;
 let isLoading = false;
 let currentFilter = 'all';
 let searchTerm = '';
+let isSetupDone = false;
 
 const PAGE_SIZE = 25;
 
@@ -49,20 +50,6 @@ function formatDateTime(timestamp) {
   }
 }
 
-function formatDate(timestamp) {
-  if (!timestamp) return '—';
-  try {
-    const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  } catch {
-    return '—';
-  }
-}
-
 function formatNumber(num) {
   return (Number(num) || 0).toLocaleString('en-IN');
 }
@@ -77,21 +64,8 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-function showLoading(text) {
-  const el = $('adminLoading');
-  if (!el) return;
-  const textEl = el.querySelector('.admin-loading-text');
-  if (textEl) textEl.textContent = text || 'Loading...';
-  el.classList.remove('hidden');
-}
-
-function hideLoading() {
-  const el = $('adminLoading');
-  if (el) el.classList.add('hidden');
-}
-
 /* ============================================
-   DETERMINE TRANSACTION TYPE
+   DETERMINE TRANSACTION CATEGORY
    ============================================ */
 function getTxCategory(tx) {
   const type = (tx.type || '').toLowerCase();
@@ -107,7 +81,6 @@ function getTxIcon(tx) {
   const category = getTxCategory(tx);
 
   if (amount > 0) {
-    // Positive amount — earned/refund
     if (category === 'refund') {
       return {
         class: 'positive',
@@ -120,7 +93,6 @@ function getTxIcon(tx) {
     };
   }
 
-  // Negative — withdrawal
   if (category === 'withdrawal') {
     return {
       class: 'negative',
@@ -147,6 +119,7 @@ async function loadTransactions(reset = false) {
   try {
     if (reset) {
       allTransactions = [];
+      filteredTransactions = [];
       lastDoc = null;
       hasMore = true;
       if (listEl) {
@@ -187,10 +160,8 @@ async function loadTransactions(reset = false) {
       return;
     }
 
-    // Save last doc for pagination
     lastDoc = snap.docs[snap.docs.length - 1];
 
-    // Append to array
     snap.forEach((docSnap) => {
       allTransactions.push({
         id: docSnap.id,
@@ -198,16 +169,11 @@ async function loadTransactions(reset = false) {
       });
     });
 
-    // Check if more pages exist
     hasMore = snap.docs.length === PAGE_SIZE;
 
-    // Update stats
     updateStats();
-
-    // Apply current filter/search
     applyFilters();
 
-    // Show/hide load more button
     if (loadMoreWrap) {
       if (hasMore) {
         loadMoreWrap.classList.remove('hidden');
@@ -219,7 +185,6 @@ async function loadTransactions(reset = false) {
   } catch (err) {
     console.error('Transactions load error:', err);
 
-    // Check for index error
     if (err.code === 'failed-precondition' || err.message?.includes('index')) {
       if (listEl) {
         listEl.innerHTML = `
@@ -265,7 +230,6 @@ function updateStats() {
       coinsSpent += Math.abs(amount);
     }
 
-    // Check today
     try {
       const txDate = tx.createdAt?.toDate ? tx.createdAt.toDate() : null;
       if (txDate && txDate >= todayStart) {
@@ -291,12 +255,10 @@ function updateStats() {
 function applyFilters() {
   let result = [...allTransactions];
 
-  // Category filter
   if (currentFilter !== 'all') {
     result = result.filter(tx => getTxCategory(tx) === currentFilter);
   }
 
-  // Search filter
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
     result = result.filter(tx => {
@@ -363,11 +325,8 @@ function createTxCard(tx) {
 
   const status = (tx.status || 'pending').toLowerCase();
   const dateTime = formatDateTime(tx.createdAt);
-
-  // Type label
   const typeLabel = tx.type || 'Transaction';
 
-  // Sub info — user or reference
   let subInfo = '';
   if (tx.userEmail) {
     subInfo = tx.userEmail;
@@ -377,7 +336,6 @@ function createTxCard(tx) {
     subInfo = 'System';
   }
 
-  // Reference line
   const refLine = tx.tx_id || tx.proof || '';
   const showRef = refLine && refLine.length < 60;
 
@@ -409,10 +367,13 @@ function createTxCard(tx) {
 }
 
 /* ============================================
-   FILTER TABS
+   SETUP: FILTER TABS (Once)
    ============================================ */
 function setupFilterTabs() {
   document.querySelectorAll('.admin-filter-tab').forEach((tab) => {
+    if (tab.dataset.bound === '1') return;
+    tab.dataset.bound = '1';
+
     tab.addEventListener('click', () => {
       document.querySelectorAll('.admin-filter-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
@@ -423,11 +384,12 @@ function setupFilterTabs() {
 }
 
 /* ============================================
-   SEARCH BAR
+   SETUP: SEARCH BAR (Once)
    ============================================ */
 function setupSearch() {
   const input = $('txSearchInput');
-  if (!input) return;
+  if (!input || input.dataset.bound === '1') return;
+  input.dataset.bound = '1';
 
   let debounceTimer;
   input.addEventListener('input', (e) => {
@@ -440,11 +402,12 @@ function setupSearch() {
 }
 
 /* ============================================
-   LOAD MORE BUTTON
+   SETUP: LOAD MORE BUTTON (Once)
    ============================================ */
 function setupLoadMore() {
   const btn = $('loadMoreBtn');
-  if (!btn) return;
+  if (!btn || btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
 
   btn.addEventListener('click', async () => {
     if (isLoading || !hasMore) return;
@@ -463,29 +426,49 @@ function setupLoadMore() {
 }
 
 /* ============================================
-   INIT AFTER AUTH
+   SETUP: REFRESH BUTTON (Once)
    ============================================ */
-window.addEventListener('adminReady', async () => {
-  console.log('Admin ready — loading transactions');
+function setupRefreshButton() {
+  const refreshBtn = $('refreshBtn');
+  if (!refreshBtn || refreshBtn.dataset.bound === '1') return;
+  refreshBtn.dataset.bound = '1';
+
+  refreshBtn.addEventListener('click', async () => {
+    refreshBtn.classList.add('spinning');
+    try {
+      await loadTransactions(true);
+    } finally {
+      setTimeout(() => {
+        refreshBtn.classList.remove('spinning');
+      }, 600);
+    }
+  });
+}
+
+/* ============================================
+   SETUP TRANSACTIONS PAGE (Once)
+   ============================================ */
+async function setupTransactions() {
+  if (isSetupDone) {
+    console.log('[Transactions] Already setup — skipping');
+    return;
+  }
+  isSetupDone = true;
+
+  console.log('[Transactions] Loading transactions...');
 
   setupFilterTabs();
   setupSearch();
   setupLoadMore();
+  setupRefreshButton();
 
   await loadTransactions(true);
+}
 
-  /* ----- REFRESH BUTTON ----- */
-  const refreshBtn = $('refreshBtn');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', async () => {
-      refreshBtn.classList.add('spinning');
-      try {
-        await loadTransactions(true);
-      } finally {
-        setTimeout(() => {
-          refreshBtn.classList.remove('spinning');
-        }, 600);
-      }
-    });
-  }
+/* ============================================
+   INIT AFTER AUTH
+   ============================================ */
+window.addEventListener('adminReady', () => {
+  console.log('[Transactions] adminReady event received');
+  setupTransactions();
 });
