@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users — Super Rewards Admin</title>
+  <meta name="description" content="Manage all users">
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- FAVICON -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta name="theme-color" content="#0a0d14">
+
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-app">
+
+  <!-- ═══════════════════════════════════════
+       TOP NAVBAR
+       ═══════════════════════════════════════ -->
+  <nav class="admin-navbar">
+    <a href="index.html" class="admin-nav-brand">
+      <span class="admin-nav-logo">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="#7c3aed" opacity="0.18"/>
+          <circle cx="50" cy="50" r="44" fill="#0a0d14" opacity="0.55"/>
+          <circle cx="50" cy="50" r="40" fill="#0a0d14" opacity="0.85"/>
+          <circle cx="50" cy="50" r="36" fill="#0a0d14"/>
+          <circle cx="50" cy="50" r="34" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.15"/>
+          <text x="50" y="68" text-anchor="middle"
+                font-family="Arial Black, Arial, sans-serif"
+                font-weight="900" font-size="52" fill="#ffffff">S</text>
+        </svg>
+      </span>
+      <span class="admin-nav-title">
+        <span class="admin-nav-title-main">Super Rewards</span>
+        <span class="admin-nav-title-sub">Admin Panel</span>
+      </span>
+    </a>
+
+    <div class="admin-nav-right">
+      <span class="admin-user-badge" id="adminUserEmail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>Loading...</span>
+      </span>
+      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span>Logout</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       MAIN CONTENT
+       ═══════════════════════════════════════ -->
+  <main class="admin-main">
+
+    <!-- Page Header -->
+    <div class="admin-page-header">
+      <div>
+        <h1 class="admin-page-title">Users</h1>
+        <p class="admin-page-sub">View, search and manage all registered users</p>
+      </div>
+      <div class="admin-refresh-btn" id="refreshBtn" title="Refresh data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         STATS MINI GRID
+         ═══════════════════════════════════════ -->
+    <div class="admin-stats-grid admin-stats-grid-small">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+          </svg>
+        </div>
+        <div class="admin-stat-info">
+          <div class="admin-stat-value" id="statTotalUsers">—</div>
+          <div class="admin-stat-label">Total Users</div>
+        </div>
+      </div>
+
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div class="admin-stat-info">
+          <div class="admin-stat-value" id="statActiveUsers">—</div>
+          <div class="admin-stat-label">Active</div>
+        </div>
+      </div>
+
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon red">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+          </svg>
+        </div>
+        <div class="admin-stat-info">
+          <div class="admin-stat-value" id="statBannedUsers">—</div>
+          <div class="admin-stat-label">Banned</div>
+        </div>
+      </div>
+
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"/>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div class="admin-stat-info">
+          <div class="admin-stat-value" id="statTotalCoins">—</div>
+          <div class="admin-stat-label">Total Coins</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         SEARCH + FILTER
+         ═══════════════════════════════════════ -->
+    <div class="admin-search-bar">
+      <div class="admin-search-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          id="userSearchInput"
+          placeholder="Search by name, email, phone, or UPI..."
+          autocomplete="off">
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="admin-filter-tabs">
+      <button class="admin-filter-tab active" data-filter="all">
+        <span class="admin-filter-label">All Users</span>
+        <span class="admin-filter-count" id="countAllUsers">0</span>
+      </button>
+      <button class="admin-filter-tab" data-filter="active">
+        <span class="admin-filter-label">Active</span>
+        <span class="admin-filter-count" id="countActiveUsers">0</span>
+      </button>
+      <button class="admin-filter-tab" data-filter="banned">
+        <span class="admin-filter-label">Banned</span>
+        <span class="admin-filter-count" id="countBannedUsers">0</span>
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         USERS LIST
+         ═══════════════════════════════════════ -->
+    <div class="admin-section">
+      <div id="usersList" class="admin-users-list">
+
+        <!-- Loading State -->
+        <div class="admin-empty-state">
+          <div class="admin-mini-spinner"></div>
+          <p>Loading users...</p>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════
+       BOTTOM NAVIGATION BAR (Mobile)
+       ═══════════════════════════════════════ -->
+  <nav class="admin-bottom-nav">
+    <a href="index.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="withdrawals.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="6" width="20" height="12" rx="2"/>
+        <path d="M2 10h20"/>
+        <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
+      </svg>
+      <span>Withdrawals</span>
+      <span class="admin-nav-badge" id="navPendingBadge">0</span>
+    </a>
+
+    <a href="users.html" class="admin-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <span>Users</span>
+    </a>
+
+    <a href="transactions.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      <span>History</span>
+    </a>
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       USER DETAILS / ACTIONS BOTTOM SHEET
+       ═══════════════════════════════════════ -->
+  <div id="userSheet" class="admin-sheet-overlay hidden">
+    <div class="admin-sheet admin-sheet-tall">
+      <div class="admin-sheet-handle"></div>
+
+      <div class="admin-sheet-header">
+        <h2>User Details</h2>
+        <button class="admin-sheet-close" id="userSheetClose">×</button>
+      </div>
+
+      <div class="admin-sheet-body">
+
+        <!-- User Info -->
+        <div class="admin-user-profile">
+          <div class="admin-user-avatar" id="sheetUserAvatar">U</div>
+          <div class="admin-user-meta">
+            <h3 id="sheetUserName">User Name</h3>
+            <p id="sheetUserEmail">user@example.com</p>
+            <div class="admin-user-status" id="sheetUserStatus">Active</div>
+          </div>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="admin-user-info-grid">
+          <div class="admin-user-info-item">
+            <span>Phone</span>
+            <strong id="sheetUserPhone">—</strong>
+          </div>
+          <div class="admin-user-info-item">
+            <span>UPI ID</span>
+            <strong id="sheetUserUpi">—</strong>
+          </div>
+          <div class="admin-user-info-item">
+            <span>Coins</span>
+            <strong id="sheetUserCoins">—</strong>
+          </div>
+          <div class="admin-user-info-item">
+            <span>Total Earned</span>
+            <strong id="sheetUserEarned">—</strong>
+          </div>
+          <div class="admin-user-info-item">
+            <span>Total Withdrawn</span>
+            <strong id="sheetUserWithdrawn">—</strong>
+          </div>
+          <div class="admin-user-info-item">
+            <span>Joined</span>
+            <strong id="sheetUserJoined">—</strong>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="admin-user-actions">
+
+          <button class="admin-action-btn admin-action-coins" id="btnAddCoins">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Add Coins</span>
+          </button>
+
+          <button class="admin-action-btn admin-action-edit-coins" id="btnSetCoins">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            <span>Set Coins</span>
+          </button>
+
+          <button class="admin-action-btn admin-action-ban" id="btnToggleBan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+            </svg>
+            <span id="btnToggleBanText">Ban User</span>
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       ADD COINS BOTTOM SHEET
+       ═══════════════════════════════════════ -->
+  <div id="coinsSheet" class="admin-sheet-overlay hidden">
+    <div class="admin-sheet">
+      <div class="admin-sheet-handle"></div>
+
+      <div class="admin-sheet-header">
+        <h2 id="coinsSheetTitle">Add Coins</h2>
+        <button class="admin-sheet-close" id="coinsSheetClose">×</button>
+      </div>
+
+      <div class="admin-sheet-body">
+        <div class="admin-sheet-info">
+          <div class="admin-sheet-row">
+            <span>User</span>
+            <strong id="coinsUser">—</strong>
+          </div>
+          <div class="admin-sheet-row">
+            <span>Current Coins</span>
+            <strong id="coinsCurrent">—</strong>
+          </div>
+        </div>
+
+        <label class="admin-sheet-label">
+          Coins <span class="admin-required">*</span>
+        </label>
+        <input
+          type="number"
+          id="coinsInput"
+          class="admin-sheet-input"
+          placeholder="Enter amount (e.g. 1000)"
+          autocomplete="off"
+          inputmode="numeric"
+          min="1">
+        <p class="admin-sheet-error" id="coinsError"></p>
+
+        <div class="admin-sheet-actions">
+          <button type="button" class="admin-sheet-btn admin-sheet-cancel" id="coinsCancelBtn">
+            Cancel
+          </button>
+          <button type="button" class="admin-sheet-btn admin-sheet-confirm" id="coinsConfirmBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Confirm</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="adminLoading" class="admin-loading hidden">
+    <div class="admin-loading-spinner"></div>
+    <p class="admin-loading-text">Processing...</p>
+  </div>
+
+  <script type="module" src="js/users.js"></script>
+
+</body>
+</html>
