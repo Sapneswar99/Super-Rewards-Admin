@@ -46,7 +46,7 @@
         </svg>
         <span>Loading...</span>
       </span>
-      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout">
+      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
           <polyline points="16 17 21 12 16 7"/>
@@ -184,7 +184,7 @@
 
       <!-- Load More Button -->
       <div class="admin-load-more-wrap hidden" id="loadMoreWrap">
-        <button class="admin-load-more-btn" id="loadMoreBtn">
+        <button class="admin-load-more-btn" id="loadMoreBtn" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"/>
           </svg>
@@ -244,6 +244,10 @@
     <p class="admin-loading-text">Loading...</p>
   </div>
 
+  <!-- ═══════════════════════════════════════
+       SCRIPTS — auth.js PEHLE, transactions.js BAAD MEIN
+       ═══════════════════════════════════════ -->
+  <script type="module" src="js/auth.js"></script>
   <script type="module" src="js/transactions.js"></script>
 
 </body>
