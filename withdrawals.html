@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Withdrawals — Super Rewards Admin</title>
+  <meta name="description" content="Manage withdrawal requests">
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- FAVICON -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta name="theme-color" content="#0a0d14">
+
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-app">
+
+  <!-- ═══════════════════════════════════════
+       TOP NAVBAR
+       ═══════════════════════════════════════ -->
+  <nav class="admin-navbar">
+    <a href="index.html" class="admin-nav-brand">
+      <span class="admin-nav-logo">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="#7c3aed" opacity="0.18"/>
+          <circle cx="50" cy="50" r="44" fill="#0a0d14" opacity="0.55"/>
+          <circle cx="50" cy="50" r="40" fill="#0a0d14" opacity="0.85"/>
+          <circle cx="50" cy="50" r="36" fill="#0a0d14"/>
+          <circle cx="50" cy="50" r="34" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.15"/>
+          <text x="50" y="68" text-anchor="middle"
+                font-family="Arial Black, Arial, sans-serif"
+                font-weight="900" font-size="52" fill="#ffffff">S</text>
+        </svg>
+      </span>
+      <span class="admin-nav-title">
+        <span class="admin-nav-title-main">Super Rewards</span>
+        <span class="admin-nav-title-sub">Admin Panel</span>
+      </span>
+    </a>
+
+    <div class="admin-nav-right">
+      <span class="admin-user-badge" id="adminUserEmail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>Loading...</span>
+      </span>
+      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span>Logout</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       MAIN CONTENT
+       ═══════════════════════════════════════ -->
+  <main class="admin-main">
+
+    <!-- Page Header -->
+    <div class="admin-page-header">
+      <div>
+        <h1 class="admin-page-title">Withdrawals</h1>
+        <p class="admin-page-sub">Review and process user withdrawal requests</p>
+      </div>
+      <div class="admin-refresh-btn" id="refreshBtn" title="Refresh data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         FILTER TABS
+         ═══════════════════════════════════════ -->
+    <div class="admin-filter-tabs">
+      <button class="admin-filter-tab active" data-filter="pending">
+        <span class="admin-filter-label">Pending</span>
+        <span class="admin-filter-count" id="countPending">0</span>
+      </button>
+      <button class="admin-filter-tab" data-filter="approved">
+        <span class="admin-filter-label">Approved</span>
+        <span class="admin-filter-count" id="countApproved">0</span>
+      </button>
+      <button class="admin-filter-tab" data-filter="rejected">
+        <span class="admin-filter-label">Rejected</span>
+        <span class="admin-filter-count" id="countRejected">0</span>
+      </button>
+      <button class="admin-filter-tab" data-filter="all">
+        <span class="admin-filter-label">All</span>
+        <span class="admin-filter-count" id="countAll">0</span>
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         WITHDRAWALS LIST
+         ═══════════════════════════════════════ -->
+    <div class="admin-section">
+      <div id="withdrawalsList" class="admin-withdrawals-list">
+
+        <!-- Loading State -->
+        <div class="admin-empty-state">
+          <div class="admin-mini-spinner"></div>
+          <p>Loading withdrawals...</p>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════
+       BOTTOM NAVIGATION BAR (Mobile)
+       ═══════════════════════════════════════ -->
+  <nav class="admin-bottom-nav">
+    <a href="index.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="withdrawals.html" class="admin-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="6" width="20" height="12" rx="2"/>
+        <path d="M2 10h20"/>
+        <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
+      </svg>
+      <span>Withdrawals</span>
+      <span class="admin-nav-badge" id="navPendingBadge">0</span>
+    </a>
+
+    <a href="users.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <span>Users</span>
+    </a>
+
+    <a href="transactions.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      <span>History</span>
+    </a>
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       APPROVE BOTTOM SHEET (UTR Input)
+       ═══════════════════════════════════════ -->
+  <div id="approveSheet" class="admin-sheet-overlay hidden">
+    <div class="admin-sheet">
+      <div class="admin-sheet-handle"></div>
+
+      <div class="admin-sheet-header">
+        <h2 id="approveSheetTitle">Approve Withdrawal</h2>
+        <button class="admin-sheet-close" id="approveSheetClose">×</button>
+      </div>
+
+      <div class="admin-sheet-body">
+        <div class="admin-sheet-info">
+          <div class="admin-sheet-row">
+            <span>User</span>
+            <strong id="approveUser">—</strong>
+          </div>
+          <div class="admin-sheet-row">
+            <span>Amount</span>
+            <strong id="approveAmount">—</strong>
+          </div>
+          <div class="admin-sheet-row" id="approveUpiRow">
+            <span>UPI ID</span>
+            <strong id="approveUpi">—</strong>
+          </div>
+          <div class="admin-sheet-row hidden" id="approveEmailRow">
+            <span>Email</span>
+            <strong id="approveEmail">—</strong>
+          </div>
+        </div>
+
+        <label class="admin-sheet-label" id="approveProofLabel">
+          UTR / Transaction ID <span class="admin-required">*</span>
+        </label>
+        <input
+          type="text"
+          id="approveProofInput"
+          class="admin-sheet-input"
+          placeholder="Enter UTR or reference number"
+          autocomplete="off">
+        <p class="admin-sheet-error" id="approveError"></p>
+
+        <div class="admin-sheet-actions">
+          <button type="button" class="admin-sheet-btn admin-sheet-cancel" id="approveCancelBtn">
+            Cancel
+          </button>
+          <button type="button" class="admin-sheet-btn admin-sheet-confirm" id="approveConfirmBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Approve</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       REJECT BOTTOM SHEET (Reason Input)
+       ═══════════════════════════════════════ -->
+  <div id="rejectSheet" class="admin-sheet-overlay hidden">
+    <div class="admin-sheet">
+      <div class="admin-sheet-handle"></div>
+
+      <div class="admin-sheet-header">
+        <h2>Reject Withdrawal</h2>
+        <button class="admin-sheet-close" id="rejectSheetClose">×</button>
+      </div>
+
+      <div class="admin-sheet-body">
+        <div class="admin-sheet-info">
+          <div class="admin-sheet-row">
+            <span>User</span>
+            <strong id="rejectUser">—</strong>
+          </div>
+          <div class="admin-sheet-row">
+            <span>Amount</span>
+            <strong id="rejectAmount">—</strong>
+          </div>
+        </div>
+
+        <div class="admin-warning-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span>Coins will be refunded to the user's account.</span>
+        </div>
+
+        <label class="admin-sheet-label">
+          Reason (optional)
+        </label>
+        <input
+          type="text"
+          id="rejectReasonInput"
+          class="admin-sheet-input"
+          placeholder="e.g. Invalid UPI ID"
+          autocomplete="off">
+        <p class="admin-sheet-error" id="rejectError"></p>
+
+        <div class="admin-sheet-actions">
+          <button type="button" class="admin-sheet-btn admin-sheet-cancel" id="rejectCancelBtn">
+            Cancel
+          </button>
+          <button type="button" class="admin-sheet-btn admin-sheet-danger" id="rejectConfirmBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Reject</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="adminLoading" class="admin-loading hidden">
+    <div class="admin-loading-spinner"></div>
+    <p class="admin-loading-text">Processing...</p>
+  </div>
+
+  <script type="module" src="js/withdrawals.js"></script>
+
+</body>
+</html>
