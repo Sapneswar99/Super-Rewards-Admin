@@ -1,6 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — USERS
    Search + Filter + User Details + Coins + Ban
+   v2 — Prevent duplicate setup + cleanup
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -25,6 +26,7 @@ let currentFilter = 'all';
 let searchTerm = '';
 let selectedUser = null;
 let coinsAction = 'add'; // 'add' or 'set'
+let isSetupDone = false;
 
 /* ============================================
    DOM HELPERS
@@ -105,10 +107,7 @@ async function loadUsers() {
       });
     });
 
-    // Update stats
     updateStats();
-
-    // Apply current filter/search
     applyFilters();
 
   } catch (err) {
@@ -154,14 +153,12 @@ function updateStats() {
 function applyFilters() {
   let result = [...allUsers];
 
-  // Status filter
   if (currentFilter === 'active') {
     result = result.filter(u => !u.isBanned);
   } else if (currentFilter === 'banned') {
     result = result.filter(u => u.isBanned);
   }
 
-  // Search filter
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
     result = result.filter(u => {
@@ -223,7 +220,7 @@ function createUserCard(u) {
   const joinDate = formatDate(u.createdAt);
 
   card.innerHTML = `
-    <div class="admin-wd-avatar${u.isBanned ? ' banned' : ''}">${initial}</div>
+    <div class="admin-wd-avatar${u.isBanned ? ' banned' : ''}">${escapeHtml(initial)}</div>
     <div class="admin-user-body">
       <div class="admin-user-name-row">
         <span class="admin-user-name">${escapeHtml(u.name || 'User')}</span>
@@ -246,10 +243,13 @@ function createUserCard(u) {
 }
 
 /* ============================================
-   FILTER TABS
+   SETUP: FILTER TABS (Once)
    ============================================ */
 function setupFilterTabs() {
   document.querySelectorAll('.admin-filter-tab').forEach((tab) => {
+    if (tab.dataset.bound === '1') return;
+    tab.dataset.bound = '1';
+
     tab.addEventListener('click', () => {
       document.querySelectorAll('.admin-filter-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
@@ -260,11 +260,12 @@ function setupFilterTabs() {
 }
 
 /* ============================================
-   SEARCH BAR
+   SETUP: SEARCH BAR (Once)
    ============================================ */
 function setupSearch() {
   const input = $('userSearchInput');
-  if (!input) return;
+  if (!input || input.dataset.bound === '1') return;
+  input.dataset.bound = '1';
 
   let debounceTimer;
   input.addEventListener('input', (e) => {
@@ -277,11 +278,12 @@ function setupSearch() {
 }
 
 /* ============================================
-   USER CARD CLICK → OPEN SHEET
+   SETUP: USER CARD CLICK (Once)
    ============================================ */
 function setupUserCardClick() {
   const listEl = $('usersList');
-  if (!listEl) return;
+  if (!listEl || listEl.dataset.bound === '1') return;
+  listEl.dataset.bound = '1';
 
   listEl.addEventListener('click', (e) => {
     const card = e.target.closest('.admin-user-card');
@@ -301,7 +303,6 @@ function openUserSheet(u) {
   const sheet = $('userSheet');
   if (!sheet) return;
 
-  // Avatar
   const avatarEl = $('sheetUserAvatar');
   if (avatarEl) {
     avatarEl.textContent = getInitial(u.name);
@@ -310,7 +311,6 @@ function openUserSheet(u) {
       : '';
   }
 
-  // Header
   const nameEl = $('sheetUserName');
   const emailEl = $('sheetUserEmail');
   const statusEl = $('sheetUserStatus');
@@ -323,7 +323,6 @@ function openUserSheet(u) {
     statusEl.className = 'admin-user-status' + (u.isBanned ? ' banned' : '');
   }
 
-  // Info grid
   const phoneEl = $('sheetUserPhone');
   const upiEl = $('sheetUserUpi');
   const coinsEl = $('sheetUserCoins');
@@ -338,7 +337,6 @@ function openUserSheet(u) {
   if (withdrawnEl) withdrawnEl.textContent = '₹' + (Number(u.totalWithdrawn) || 0);
   if (joinedEl) joinedEl.textContent = formatDate(u.createdAt);
 
-  // Ban button text
   const banText = $('btnToggleBanText');
   if (banText) {
     banText.textContent = u.isBanned ? 'Unban User' : 'Ban User';
@@ -350,7 +348,6 @@ function openUserSheet(u) {
     else banBtn.classList.remove('unban');
   }
 
-  // Show sheet
   sheet.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
@@ -363,11 +360,12 @@ function closeUserSheet() {
 }
 
 /* ============================================
-   SETUP USER SHEET CLOSE
+   SETUP: USER SHEET (Once)
    ============================================ */
 function setupUserSheet() {
   const sheet = $('userSheet');
-  if (!sheet) return;
+  if (!sheet || sheet.dataset.bound === '1') return;
+  sheet.dataset.bound = '1';
 
   const closeBtn = $('userSheetClose');
   if (closeBtn) closeBtn.addEventListener('click', closeUserSheet);
@@ -382,7 +380,6 @@ function setupUserSheet() {
     }
   });
 
-  // Action buttons
   const addCoinsBtn = $('btnAddCoins');
   const setCoinsBtn = $('btnSetCoins');
   const toggleBanBtn = $('btnToggleBan');
@@ -443,9 +440,13 @@ function closeCoinsSheet() {
   if (sheet) sheet.classList.add('hidden');
 }
 
+/* ============================================
+   SETUP: COINS SHEET (Once)
+   ============================================ */
 function setupCoinsSheet() {
   const sheet = $('coinsSheet');
-  if (!sheet) return;
+  if (!sheet || sheet.dataset.bound === '1') return;
+  sheet.dataset.bound = '1';
 
   const closeBtn = $('coinsSheetClose');
   const cancelBtn = $('coinsCancelBtn');
@@ -460,7 +461,6 @@ function setupCoinsSheet() {
     if (e.target === sheet) closeCoinsSheet();
   });
 
-  // Confirm coins update
   if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
       if (!selectedUser) return;
@@ -481,7 +481,6 @@ function setupCoinsSheet() {
       const u = selectedUser;
       const currentCoins = Number(u.coins) || 0;
 
-      // Calculate new total
       let newTotal;
       if (coinsAction === 'add') {
         newTotal = currentCoins + amount;
@@ -489,7 +488,6 @@ function setupCoinsSheet() {
         newTotal = amount;
       }
 
-      // Confirmation for "set" action
       if (coinsAction === 'set') {
         const ok = confirm(
           `Set ${u.name}'s coins to ${formatNumber(amount)}?\n\n` +
@@ -519,7 +517,6 @@ function setupCoinsSheet() {
             newValue = amount;
           }
 
-          // Update user coins
           tx.update(userRef, {
             coins: newValue,
             ...(coinsAction === 'add' ? {
@@ -528,7 +525,7 @@ function setupCoinsSheet() {
           });
         });
 
-        // Create transaction log
+        // Log transaction
         try {
           const delta = coinsAction === 'add' ? amount : (newTotal - currentCoins);
           await addDoc(collection(db, 'transactions'), {
@@ -548,7 +545,6 @@ function setupCoinsSheet() {
         // Update local data
         const idx = allUsers.findIndex(x => x.id === u.id);
         if (idx !== -1) {
-          const oldCoins = allUsers[idx].coins;
           allUsers[idx].coins = newTotal;
           if (coinsAction === 'add') {
             allUsers[idx].totalEarned = (Number(allUsers[idx].totalEarned) || 0) + amount;
@@ -559,11 +555,9 @@ function setupCoinsSheet() {
         hideLoading();
         closeCoinsSheet();
 
-        // Update UI
         updateStats();
         applyFilters();
 
-        // Update sheet info
         const coinsEl = $('sheetUserCoins');
         if (coinsEl) coinsEl.textContent = formatNumber(newTotal);
         const earnedEl = $('sheetUserEarned');
@@ -612,7 +606,6 @@ async function handleToggleBan() {
       bannedAt: newBanState ? serverTimestamp() : null
     });
 
-    // Update local data
     const idx = allUsers.findIndex(x => x.id === u.id);
     if (idx !== -1) {
       allUsers[idx].isBanned = newBanState;
@@ -621,7 +614,6 @@ async function handleToggleBan() {
 
     hideLoading();
 
-    // Update sheet UI
     const statusEl = $('sheetUserStatus');
     if (statusEl) {
       statusEl.textContent = newBanState ? 'Banned' : 'Active';
@@ -646,7 +638,6 @@ async function handleToggleBan() {
         : '';
     }
 
-    // Update main list
     updateStats();
     applyFilters();
 
@@ -664,31 +655,51 @@ async function handleToggleBan() {
 }
 
 /* ============================================
-   INIT AFTER AUTH
+   SETUP: REFRESH BUTTON (Once)
    ============================================ */
-window.addEventListener('adminReady', async () => {
-  console.log('Admin ready — loading users');
+function setupRefreshButton() {
+  const refreshBtn = $('refreshBtn');
+  if (!refreshBtn || refreshBtn.dataset.bound === '1') return;
+  refreshBtn.dataset.bound = '1';
+
+  refreshBtn.addEventListener('click', async () => {
+    refreshBtn.classList.add('spinning');
+    try {
+      await loadUsers();
+    } finally {
+      setTimeout(() => {
+        refreshBtn.classList.remove('spinning');
+      }, 600);
+    }
+  });
+}
+
+/* ============================================
+   SETUP USERS PAGE (Once)
+   ============================================ */
+async function setupUsers() {
+  if (isSetupDone) {
+    console.log('[Users] Already setup — skipping');
+    return;
+  }
+  isSetupDone = true;
+
+  console.log('[Users] Loading users...');
 
   setupFilterTabs();
   setupSearch();
   setupUserCardClick();
   setupUserSheet();
   setupCoinsSheet();
+  setupRefreshButton();
 
   await loadUsers();
+}
 
-  /* ----- REFRESH BUTTON ----- */
-  const refreshBtn = $('refreshBtn');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', async () => {
-      refreshBtn.classList.add('spinning');
-      try {
-        await loadUsers();
-      } finally {
-        setTimeout(() => {
-          refreshBtn.classList.remove('spinning');
-        }, 600);
-      }
-    });
-  }
+/* ============================================
+   INIT AFTER AUTH
+   ============================================ */
+window.addEventListener('adminReady', () => {
+  console.log('[Users] adminReady event received');
+  setupUsers();
 });
