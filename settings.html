@@ -15,9 +15,7 @@
 </head>
 <body class="admin-app">
 
-  <!-- ═══════════════════════════════════════
-       TOP NAVBAR
-       ═══════════════════════════════════════ -->
+  <!-- TOP NAVBAR -->
   <nav class="admin-navbar">
     <a href="index.html" class="admin-nav-brand">
       <span class="admin-nav-logo">
@@ -46,7 +44,7 @@
         </svg>
         <span>Loading...</span>
       </span>
-      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout">
+      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
           <polyline points="16 17 21 12 16 7"/>
@@ -57,9 +55,7 @@
     </div>
   </nav>
 
-  <!-- ═══════════════════════════════════════
-       MAIN CONTENT
-       ═══════════════════════════════════════ -->
+  <!-- MAIN CONTENT -->
   <main class="admin-main">
 
     <!-- Page Header -->
@@ -77,9 +73,7 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════
-         COIN SYSTEM
-         ═══════════════════════════════════════ -->
+    <!-- COIN SYSTEM -->
     <div class="admin-section">
       <div class="admin-section-header">
         <h2 class="admin-section-title">
@@ -93,19 +87,12 @@
       </div>
 
       <div class="admin-settings-form">
-
         <div class="admin-settings-row">
           <div class="admin-settings-label">
             <label for="settingsCoinRate">Coins per ₹1</label>
             <span class="admin-settings-hint">How many coins equal 1 rupee</span>
           </div>
-          <input
-            type="number"
-            id="settingsCoinRate"
-            class="admin-settings-input"
-            placeholder="100"
-            min="1"
-            inputmode="numeric">
+          <input type="number" id="settingsCoinRate" class="admin-settings-input" placeholder="100" min="1" inputmode="numeric">
         </div>
 
         <div class="admin-settings-row">
@@ -113,22 +100,12 @@
             <label for="settingsMinWithdraw">Minimum Withdrawal (Coins)</label>
             <span class="admin-settings-hint">Minimum coins required to withdraw</span>
           </div>
-          <input
-            type="number"
-            id="settingsMinWithdraw"
-            class="admin-settings-input"
-            placeholder="1000"
-            min="100"
-            step="100"
-            inputmode="numeric">
+          <input type="number" id="settingsMinWithdraw" class="admin-settings-input" placeholder="1000" min="100" step="100" inputmode="numeric">
         </div>
-
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════
-         OFFERWALL SETTINGS
-         ═══════════════════════════════════════ -->
+    <!-- OFFERWALL SETTINGS -->
     <div class="admin-section">
       <div class="admin-section-header">
         <h2 class="admin-section-title">
@@ -141,18 +118,12 @@
       </div>
 
       <div class="admin-settings-form">
-
         <div class="admin-settings-row">
           <div class="admin-settings-label">
             <label for="settingsCpxId">CPX Research App ID</label>
             <span class="admin-settings-hint">Get from cpx-research.com dashboard</span>
           </div>
-          <input
-            type="text"
-            id="settingsCpxId"
-            class="admin-settings-input"
-            placeholder="e.g. 12345"
-            autocomplete="off">
+          <input type="text" id="settingsCpxId" class="admin-settings-input" placeholder="e.g. 12345" autocomplete="off">
         </div>
 
         <div class="admin-settings-row">
@@ -160,20 +131,12 @@
             <label for="settingsAdgemId">AdGem App ID</label>
             <span class="admin-settings-hint">Get from adgem.com dashboard</span>
           </div>
-          <input
-            type="text"
-            id="settingsAdgemId"
-            class="admin-settings-input"
-            placeholder="e.g. 67890"
-            autocomplete="off">
+          <input type="text" id="settingsAdgemId" class="admin-settings-input" placeholder="e.g. 67890" autocomplete="off">
         </div>
-
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════
-         MAINTENANCE MODE
-         ═══════════════════════════════════════ -->
+    <!-- MAINTENANCE -->
     <div class="admin-section">
       <div class="admin-section-header">
         <h2 class="admin-section-title">
@@ -187,7 +150,6 @@
       </div>
 
       <div class="admin-settings-form">
-
         <div class="admin-settings-row">
           <div class="admin-settings-label">
             <label for="settingsMaintenance">Maintenance Mode</label>
@@ -198,15 +160,12 @@
             <span class="admin-toggle-slider"></span>
           </label>
         </div>
-
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════
-         SAVE BUTTON
-         ═══════════════════════════════════════ -->
+    <!-- SAVE BUTTON -->
     <div class="admin-settings-actions">
-      <button class="admin-save-btn" id="saveSettingsBtn">
+      <button class="admin-save-btn" id="saveSettingsBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
           <polyline points="17 21 17 13 7 13 7 21"/>
@@ -214,13 +173,10 @@
         </svg>
         <span>Save Settings</span>
       </button>
-
       <p class="admin-save-msg" id="saveMsg"></p>
     </div>
 
-    <!-- ═══════════════════════════════════════
-         ADMIN INFO
-         ═══════════════════════════════════════ -->
+    <!-- ADMIN INFO -->
     <div class="admin-section">
       <div class="admin-section-header">
         <h2 class="admin-section-title">
@@ -234,34 +190,22 @@
       </div>
 
       <div class="admin-settings-form">
-
         <div class="admin-settings-row">
-          <div class="admin-settings-label">
-            <label>Admin Email</label>
-          </div>
+          <div class="admin-settings-label"><label>Admin Email</label></div>
           <strong class="admin-info-value" id="adminInfoEmail">—</strong>
         </div>
-
         <div class="admin-settings-row">
-          <div class="admin-settings-label">
-            <label>Last Login</label>
-          </div>
+          <div class="admin-settings-label"><label>Last Login</label></div>
           <strong class="admin-info-value" id="adminInfoLastLogin">—</strong>
         </div>
-
         <div class="admin-settings-row">
-          <div class="admin-settings-label">
-            <label>Panel Version</label>
-          </div>
+          <div class="admin-settings-label"><label>Panel Version</label></div>
           <strong class="admin-info-value">v1.0.0</strong>
         </div>
-
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════
-         DANGER ZONE
-         ═══════════════════════════════════════ -->
+    <!-- DANGER ZONE -->
     <div class="admin-section admin-danger-section">
       <div class="admin-section-header">
         <h2 class="admin-section-title admin-danger-title">
@@ -275,7 +219,7 @@
       </div>
 
       <div class="admin-danger-actions">
-        <button class="admin-danger-btn" id="clearCacheBtn">
+        <button class="admin-danger-btn" id="clearCacheBtn" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"/>
             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2l-1-14"/>
@@ -284,7 +228,7 @@
           <span>Clear Local Cache</span>
         </button>
 
-        <button class="admin-danger-btn" id="signOutAllBtn">
+        <button class="admin-danger-btn" id="signOutAllBtn" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
@@ -297,9 +241,7 @@
 
   </main>
 
-  <!-- ═══════════════════════════════════════
-       BOTTOM NAVIGATION BAR (Mobile)
-       ═══════════════════════════════════════ -->
+  <!-- BOTTOM NAV -->
   <nav class="admin-bottom-nav">
     <a href="index.html" class="admin-nav-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -310,7 +252,6 @@
       </svg>
       <span>Dashboard</span>
     </a>
-
     <a href="withdrawals.html" class="admin-nav-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="2" y="6" width="20" height="12" rx="2"/>
@@ -320,7 +261,6 @@
       <span>Withdrawals</span>
       <span class="admin-nav-badge" id="navPendingBadge">0</span>
     </a>
-
     <a href="users.html" class="admin-nav-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -330,7 +270,6 @@
       </svg>
       <span>Users</span>
     </a>
-
     <a href="transactions.html" class="admin-nav-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -345,6 +284,10 @@
     <p class="admin-loading-text">Saving...</p>
   </div>
 
+  <!-- ═══════════════════════════════════════
+       SCRIPTS — auth.js PEHLE, settings.js BAAD MEIN
+       ═══════════════════════════════════════ -->
+  <script type="module" src="js/auth.js"></script>
   <script type="module" src="js/settings.js"></script>
 
 </body>
