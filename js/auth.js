@@ -18,7 +18,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* ============================================
-   DETECT PAGE TYPE (ROBUST)
+   DETECT PAGE TYPE
    ============================================ */
 function detectPageType() {
   const path = window.location.pathname;
@@ -66,6 +66,45 @@ document.querySelectorAll('.admin-toggle-password').forEach((btn) => {
       btn.setAttribute('aria-label', 'Show password');
     }
   });
+});
+
+/* ============================================
+   GLOBAL LOGOUT HANDLER (Document Level)
+   Works for any element with id="adminLogoutBtn"
+   ============================================ */
+let isLoggingOut = false;
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('#adminLogoutBtn');
+  if (!btn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (isLoggingOut) {
+    console.log('[Auth] Logout already in progress');
+    return;
+  }
+
+  isLoggingOut = true;
+  console.log('[Auth] Logout clicked');
+
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+
+  const forceRedirect = () => {
+    console.log('[Auth] Redirecting to login.html');
+    window.location.replace('login.html');
+  };
+
+  try {
+    await signOut(auth);
+    console.log('[Auth] Signed out successfully');
+  } catch (err) {
+    console.error('[Auth] SignOut error:', err);
+  }
+
+  forceRedirect();
 });
 
 /* ============================================
@@ -133,7 +172,7 @@ if (isLoginPage) {
         if (successEl) successEl.textContent = '✅ Login successful. Redirecting...';
 
         setTimeout(() => {
-          window.location.href = 'index.html';
+          window.location.replace('index.html');
         }, 500);
 
       } catch (err) {
@@ -167,7 +206,7 @@ if (isLoginPage) {
   // Auto-redirect if already logged in as admin
   onAuthStateChanged(auth, (user) => {
     if (user && isAdminEmail(user.email)) {
-      window.location.href = 'index.html';
+      window.location.replace('index.html');
     } else if (user && !isAdminEmail(user.email)) {
       signOut(auth);
     }
@@ -175,93 +214,25 @@ if (isLoginPage) {
 }
 
 /* ============================================
-   ADMIN PAGES — LOGOUT + AUTH GUARD
+   ADMIN PAGES — AUTH GUARD
    ============================================ */
 if (isAdminPage) {
 
-  console.log('[Auth] Admin page detected — setting up');
+  console.log('[Auth] Admin page detected');
 
-  /* --------------------------------------
-     LOGOUT BUTTON — Setup (multiple tries)
-     -------------------------------------- */
-  let logoutBound = false;
-
-  function setupLogoutButton() {
-    if (logoutBound) return;
-
-    const logoutBtn = document.getElementById('adminLogoutBtn');
-    if (!logoutBtn) {
-      console.warn('[Auth] Logout button not found yet');
-      return;
-    }
-
-    logoutBound = true;
-    console.log('[Auth] Binding logout button');
-
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      console.log('[Auth] Logout clicked');
-
-      logoutBtn.disabled = true;
-
-      try {
-        await signOut(auth);
-        console.log('[Auth] Signed out, redirecting...');
-        window.location.href = 'login.html';
-      } catch (err) {
-        console.error('[Auth] Logout error:', err);
-        alert('Logout failed: ' + err.message);
-        logoutBtn.disabled = false;
-      }
-    });
-  }
-
-  // Try immediate
-  setupLogoutButton();
-
-  // Try on DOMContentLoaded
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupLogoutButton);
-  }
-
-  // Try on window load
-  window.addEventListener('load', setupLogoutButton);
-
-  // Fallback: Event delegation on document (works even if button added later)
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('#adminLogoutBtn');
-    if (btn && !btn.dataset.delegatedBound) {
-      // Only use if not already bound normally
-      if (!logoutBound) {
-        btn.dataset.delegatedBound = '1';
-        console.log('[Auth] Logout via delegation');
-        btn.disabled = true;
-        signOut(auth).then(() => {
-          window.location.href = 'login.html';
-        }).catch((err) => {
-          console.error('[Auth] Delegated logout error:', err);
-          btn.disabled = false;
-        });
-      }
-    }
-  });
-
-  /* --------------------------------------
-     AUTH GUARD
-     -------------------------------------- */
   onAuthStateChanged(auth, async (user) => {
     console.log('[Auth] State changed:', user ? user.email : 'no user');
 
     if (!user) {
       console.log('[Auth] No user — redirect to login');
-      window.location.href = 'login.html';
+      window.location.replace('login.html');
       return;
     }
 
     if (!isAdminEmail(user.email)) {
       console.warn('[Auth] Not admin — signing out');
       await signOut(auth);
-      window.location.href = 'login.html';
+      window.location.replace('login.html');
       return;
     }
 
@@ -304,7 +275,7 @@ if (isAdminPage) {
       }
     }
 
-    // Dispatch adminReady event (with retries for late listeners)
+    // Dispatch adminReady event (with retries)
     console.log('[Auth] Dispatching adminReady');
     const fireReady = () => {
       window.dispatchEvent(new CustomEvent('adminReady', {
@@ -313,7 +284,6 @@ if (isAdminPage) {
     };
 
     fireReady();
-    // Retry in case dashboard.js loaded after
     setTimeout(fireReady, 100);
     setTimeout(fireReady, 500);
   });
@@ -359,7 +329,7 @@ if (isAdminPage) {
     idleTimer = setTimeout(async () => {
       alert('Session expired due to inactivity. Please login again.');
       try { await signOut(auth); } catch (err) {}
-      window.location.href = 'login.html';
+      window.location.replace('login.html');
     }, IDLE_LIMIT);
   };
 
