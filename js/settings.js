@@ -1,6 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — SETTINGS
    Load + Save platform settings
+   v2 — Prevent duplicate setup + cleanup
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -8,12 +9,7 @@ import {
   doc,
   getDoc,
   setDoc,
-  serverTimestamp,
-  collection,
-  query,
-  where,
-  getDocs,
-  updateDoc
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
@@ -27,6 +23,8 @@ let currentSettings = {
   adgemAppId: '',
   maintenance: false
 };
+
+let isSetupDone = false;
 
 /* ============================================
    DOM HELPERS
@@ -67,7 +65,6 @@ function showSaveMsg(msg, type = 'success') {
    ============================================ */
 async function loadSettings() {
   try {
-    // Reference: settings/platform
     const settingsRef = doc(db, 'settings', 'platform');
     const snap = await getDoc(settingsRef);
 
@@ -94,7 +91,6 @@ async function loadSettings() {
       });
     }
 
-    // Populate form fields
     populateForm();
 
   } catch (err) {
@@ -131,7 +127,7 @@ function populateForm() {
   if (adgemIdEl) adgemIdEl.value = currentSettings.adgemAppId;
   if (maintenanceEl) maintenanceEl.checked = currentSettings.maintenance;
 
-  // Also cache in localStorage for user panel sync
+  // Cache in localStorage for user panel
   try {
     localStorage.setItem('sr_admin_settings', JSON.stringify(currentSettings));
   } catch {}
@@ -144,7 +140,6 @@ async function saveSettings() {
   const saveBtn = $('saveSettingsBtn');
   if (!saveBtn) return;
 
-  // Read values
   const coinRate = parseInt($('settingsCoinRate')?.value, 10);
   const minWithdraw = parseInt($('settingsMinWithdraw')?.value, 10);
   const cpxAppId = ($('settingsCpxId')?.value || '').trim();
@@ -169,14 +164,12 @@ async function saveSettings() {
     return;
   }
 
-  // CPX App ID — optional, but if provided should be alphanumeric
   if (cpxAppId && !/^[a-zA-Z0-9_-]{1,50}$/.test(cpxAppId)) {
     showSaveMsg('CPX App ID contains invalid characters.', 'error');
     $('settingsCpxId')?.focus();
     return;
   }
 
-  // AdGem App ID — same check
   if (adgemAppId && !/^[a-zA-Z0-9_-]{1,50}$/.test(adgemAppId)) {
     showSaveMsg('AdGem App ID contains invalid characters.', 'error');
     $('settingsAdgemId')?.focus();
@@ -203,8 +196,9 @@ async function saveSettings() {
       updatedBy: auth.currentUser?.email || 'unknown'
     };
 
-    // Check if doc exists
     const existingSnap = await getDoc(settingsRef);
+    const coinRateChanged = existingSnap.exists() &&
+      Number(existingSnap.data().coinRate) !== coinRate;
 
     if (existingSnap.exists()) {
       await setDoc(settingsRef, newSettings, { merge: true });
@@ -224,17 +218,13 @@ async function saveSettings() {
       maintenance
     };
 
-    // Cache in localStorage for user panel
+    // Cache in localStorage
     try {
       localStorage.setItem('sr_admin_settings', JSON.stringify(currentSettings));
       localStorage.setItem('sr_settings_updated', Date.now().toString());
     } catch {}
 
     showSaveMsg('✅ Settings saved successfully!', 'success');
-
-    // Check if critical settings changed
-    const coinRateChanged = existingSnap.exists() &&
-      existingSnap.data().coinRate !== coinRate;
 
     if (coinRateChanged) {
       setTimeout(() => {
@@ -280,14 +270,10 @@ async function clearCache() {
   showLoading('Clearing cache...');
 
   try {
-    // Clear our app-specific keys
     localStorage.removeItem('sr_admin_settings');
     localStorage.removeItem('sr_settings_updated');
-
-    // Clear sessionStorage
     sessionStorage.clear();
 
-    // Clear any custom caches
     if ('caches' in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map(key => caches.delete(key)));
@@ -329,9 +315,8 @@ async function signOutAllDevices() {
     await signOut(auth);
     hideLoading();
 
-    // Redirect after a moment
     setTimeout(() => {
-      window.location.href = 'login.html';
+      window.location.replace('login.html');
     }, 400);
 
   } catch (err) {
@@ -342,7 +327,7 @@ async function signOutAllDevices() {
 }
 
 /* ============================================
-   HANDLE ENTER KEY ON INPUTS
+   ENTER KEY ON INPUTS
    ============================================ */
 function setupEnterKeySave() {
   ['settingsCoinRate', 'settingsMinWithdraw', 'settingsCpxId', 'settingsAdgemId'].forEach((id) => {
@@ -362,21 +347,21 @@ function setupEnterKeySave() {
    SETUP BUTTONS
    ============================================ */
 function setupButtons() {
-  // Save settings
   const saveBtn = $('saveSettingsBtn');
-  if (saveBtn) {
+  if (saveBtn && !saveBtn.dataset.bound) {
+    saveBtn.dataset.bound = '1';
     saveBtn.addEventListener('click', saveSettings);
   }
 
-  // Clear cache
   const clearCacheBtn = $('clearCacheBtn');
-  if (clearCacheBtn) {
+  if (clearCacheBtn && !clearCacheBtn.dataset.bound) {
+    clearCacheBtn.dataset.bound = '1';
     clearCacheBtn.addEventListener('click', clearCache);
   }
 
-  // Sign out all devices
   const signOutAllBtn = $('signOutAllBtn');
-  if (signOutAllBtn) {
+  if (signOutAllBtn && !signOutAllBtn.dataset.bound) {
+    signOutAllBtn.dataset.bound = '1';
     signOutAllBtn.addEventListener('click', signOutAllDevices);
   }
 }
@@ -387,11 +372,9 @@ function setupButtons() {
 async function loadAdminInfo(user) {
   if (!user) return;
 
-  // Admin email (already set by auth.js, but ensure)
   const emailEl = $('adminInfoEmail');
   if (emailEl) emailEl.textContent = user.email || '—';
 
-  // Last login
   const lastLoginEl = $('adminInfoLastLogin');
   if (!lastLoginEl) return;
 
@@ -424,12 +407,18 @@ async function loadAdminInfo(user) {
 }
 
 /* ============================================
-   INIT AFTER AUTH
+   SETUP SETTINGS PAGE (Once)
    ============================================ */
-window.addEventListener('adminReady', async (e) => {
-  console.log('Admin ready — loading settings');
+async function setupSettings() {
+  if (isSetupDone) {
+    console.log('[Settings] Already setup — skipping');
+    return;
+  }
+  isSetupDone = true;
 
-  const user = e.detail?.user;
+  console.log('[Settings] Loading settings...');
+
+  const user = auth.currentUser;
 
   setupButtons();
   setupEnterKeySave();
@@ -439,7 +428,8 @@ window.addEventListener('adminReady', async (e) => {
 
   /* ----- REFRESH BUTTON ----- */
   const refreshBtn = $('refreshBtn');
-  if (refreshBtn) {
+  if (refreshBtn && !refreshBtn.dataset.bound) {
+    refreshBtn.dataset.bound = '1';
     refreshBtn.addEventListener('click', async () => {
       refreshBtn.classList.add('spinning');
       try {
@@ -453,4 +443,12 @@ window.addEventListener('adminReady', async (e) => {
       }
     });
   }
+}
+
+/* ============================================
+   INIT AFTER AUTH
+   ============================================ */
+window.addEventListener('adminReady', (e) => {
+  console.log('[Settings] adminReady event received');
+  setupSettings();
 });
