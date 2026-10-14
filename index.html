@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Super Rewards</title>
+  <meta name="description" content="Super Rewards Admin Panel">
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- FAVICON -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta name="theme-color" content="#0a0d14">
+
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-app">
+
+  <!-- ═══════════════════════════════════════
+       TOP NAVBAR
+       ═══════════════════════════════════════ -->
+  <nav class="admin-navbar">
+    <a href="index.html" class="admin-nav-brand">
+      <span class="admin-nav-logo">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="#7c3aed" opacity="0.18"/>
+          <circle cx="50" cy="50" r="44" fill="#0a0d14" opacity="0.55"/>
+          <circle cx="50" cy="50" r="40" fill="#0a0d14" opacity="0.85"/>
+          <circle cx="50" cy="50" r="36" fill="#0a0d14"/>
+          <circle cx="50" cy="50" r="34" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.15"/>
+          <text x="50" y="68" text-anchor="middle"
+                font-family="Arial Black, Arial, sans-serif"
+                font-weight="900" font-size="52" fill="#ffffff">S</text>
+        </svg>
+      </span>
+      <span class="admin-nav-title">
+        <span class="admin-nav-title-main">Super Rewards</span>
+        <span class="admin-nav-title-sub">Admin Panel</span>
+      </span>
+    </a>
+
+    <div class="admin-nav-right">
+      <span class="admin-user-badge" id="adminUserEmail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>Loading...</span>
+      </span>
+      <button id="adminLogoutBtn" class="admin-logout-btn" title="Logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span>Logout</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       MAIN CONTENT
+       ═══════════════════════════════════════ -->
+  <main class="admin-main">
+
+    <!-- Page Header -->
+    <div class="admin-page-header">
+      <div>
+        <h1 class="admin-page-title">Dashboard</h1>
+        <p class="admin-page-sub">Overview of your platform activity</p>
+      </div>
+      <div class="admin-refresh-btn" id="refreshBtn" title="Refresh data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         STATS GRID
+         ═══════════════════════════════════════ -->
+    <div class="admin-stats-grid">
+
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="admin-stat-info">
+          <div class="admin-stat-value" id="statTotalUsers">—</div>
+          <div class="admin-stat-label">Total Users</div>
+        </div>
+      </div>
+
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon orange">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div class="admin-stat-info">
+          <div class="admin-stat-value" id="statPendingWithdrawals">—</div>
+          <div class="admin-stat-label">Pending Withdrawals</div>
+        </div>
+      </div>
+
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+            <line x1="12" y1="6" x2="12" y2="18"/>
+          </svg>
+        </div>
+        <div class="admin-stat-info">
+          <div class="admin-stat-value" id="statTotalPaid">—</div>
+          <div class="admin-stat-label">Total Paid (₹)</div>
+        </div>
+      </div>
+
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"/>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div class="admin-stat-info">
+          <div class="admin-stat-value" id="statTotalCoins">—</div>
+          <div class="admin-stat-label">Coins in Circulation</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         QUICK ACTIONS
+         ═══════════════════════════════════════ -->
+    <div class="admin-section">
+      <h2 class="admin-section-title">Quick Actions</h2>
+
+      <div class="admin-quick-actions">
+
+        <a href="withdrawals.html" class="admin-quick-card">
+          <div class="admin-quick-icon orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="6" width="20" height="12" rx="2"/>
+              <path d="M2 10h20"/>
+              <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="admin-quick-info">
+            <div class="admin-quick-title">Withdrawals</div>
+            <div class="admin-quick-sub">Approve / Reject requests</div>
+          </div>
+          <svg class="admin-quick-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
+
+        <a href="users.html" class="admin-quick-card">
+          <div class="admin-quick-icon purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <div class="admin-quick-info">
+            <div class="admin-quick-title">Manage Users</div>
+            <div class="admin-quick-sub">Ban, edit coins, view info</div>
+          </div>
+          <svg class="admin-quick-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
+
+        <a href="transactions.html" class="admin-quick-card">
+          <div class="admin-quick-icon blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <div class="admin-quick-info">
+            <div class="admin-quick-title">All Transactions</div>
+            <div class="admin-quick-sub">Complete activity log</div>
+          </div>
+          <svg class="admin-quick-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
+
+        <a href="settings.html" class="admin-quick-card">
+          <div class="admin-quick-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </div>
+          <div class="admin-quick-info">
+            <div class="admin-quick-title">Settings</div>
+            <div class="admin-quick-sub">Coin rate, offerwalls, config</div>
+          </div>
+          <svg class="admin-quick-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         RECENT PENDING WITHDRAWALS
+         ═══════════════════════════════════════ -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2 class="admin-section-title">Recent Pending Withdrawals</h2>
+        <a href="withdrawals.html" class="admin-see-all">See All →</a>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>User</th>
+              <th>Method</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="recentWithdrawals">
+            <tr>
+              <td colspan="5" class="admin-table-loading">
+                <div class="admin-mini-spinner"></div>
+                Loading...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         RECENT USERS
+         ═══════════════════════════════════════ -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2 class="admin-section-title">Recent Users</h2>
+        <a href="users.html" class="admin-see-all">See All →</a>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Coins</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody id="recentUsers">
+            <tr>
+              <td colspan="4" class="admin-table-loading">
+                <div class="admin-mini-spinner"></div>
+                Loading...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════
+       BOTTOM NAVIGATION BAR (Mobile)
+       ═══════════════════════════════════════ -->
+  <nav class="admin-bottom-nav">
+    <a href="index.html" class="admin-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="withdrawals.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="6" width="20" height="12" rx="2"/>
+        <path d="M2 10h20"/>
+        <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
+      </svg>
+      <span>Withdrawals</span>
+      <span class="admin-nav-badge" id="navPendingBadge">0</span>
+    </a>
+
+    <a href="users.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <span>Users</span>
+    </a>
+
+    <a href="transactions.html" class="admin-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      <span>History</span>
+    </a>
+
+  </nav>
+
+  <!-- Loading Overlay -->
+  <div id="adminLoading" class="admin-loading hidden">
+    <div class="admin-loading-spinner"></div>
+    <p class="admin-loading-text">Loading...</p>
+  </div>
+
+  <script type="module" src="js/dashboard.js"></script>
+
+</body>
+</html>
