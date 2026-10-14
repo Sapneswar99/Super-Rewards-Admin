@@ -1,6 +1,6 @@
 /* ============================================
    SUPER REWARDS ADMIN — AUTHENTICATION
-   Admin login + auth guard for all pages
+   Robust page detection + logout + auth guard
    ============================================ */
 
 import { auth, db, ADMIN_EMAILS, isAdminEmail } from './firebase-config.js';
@@ -13,21 +13,37 @@ import {
   doc,
   getDoc,
   updateDoc,
+  setDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* ============================================
-   DETECT PAGE TYPE
+   DETECT PAGE TYPE (ROBUST)
    ============================================ */
-const path = window.location.pathname;
-const currentFile = path.split('/').pop() || 'index.html';
+function detectPageType() {
+  const path = window.location.pathname;
+  const filename = path.split('/').filter(Boolean).pop() || 'index.html';
+  const cleanName = filename.replace(/\.html?$/i, '').toLowerCase();
 
-const isLoginPage = currentFile === 'login.html' || currentFile === '';
-const isAdminPage = !isLoginPage;
+  const isLogin = cleanName === 'login';
+
+  console.log('[Auth] Page detection:', {
+    path: path,
+    filename: filename,
+    cleanName: cleanName,
+    isLoginPage: isLogin
+  });
+
+  return {
+    isLoginPage: isLogin,
+    isAdminPage: !isLogin
+  };
+}
+
+const { isLoginPage, isAdminPage } = detectPageType();
 
 /* ============================================
    PASSWORD SHOW/HIDE TOGGLE
-   (Applies to login page)
    ============================================ */
 document.querySelectorAll('.admin-toggle-password').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -65,66 +81,45 @@ if (isLoginPage) {
   const loginBtn = document.getElementById('adminLoginBtn');
   const loadingOverlay = document.getElementById('adminLoading');
 
-  /* --------------------------------------
-     HANDLE LOGIN SUBMIT
-     -------------------------------------- */
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Reset messages
       if (errorEl) errorEl.textContent = '';
       if (successEl) successEl.textContent = '';
 
       const email = (emailInput?.value || '').trim().toLowerCase();
       const password = passwordInput?.value || '';
 
-      /* --------------------------------------
-         VALIDATIONS
-         -------------------------------------- */
       if (!email || !password) {
         if (errorEl) errorEl.textContent = 'Please fill all fields.';
         return;
       }
 
-      // Check email whitelist
       if (!isAdminEmail(email)) {
-        if (errorEl) {
-          errorEl.textContent = '⛔ Access denied. Not an admin account.';
-        }
+        if (errorEl) errorEl.textContent = '⛔ Access denied. Not an admin account.';
         return;
       }
 
-      /* --------------------------------------
-         ATTEMPT LOGIN
-         -------------------------------------- */
       setLoading(loginBtn, true, 'Signing in...');
       showOverlay(loadingOverlay, 'Verifying credentials...');
 
       try {
-        // 1. Firebase Auth sign in
         const cred = await signInWithEmailAndPassword(auth, email, password);
 
-        // 2. Double-check admin whitelist
         if (!isAdminEmail(cred.user.email)) {
           await signOut(auth);
           throw new Error('Admin access only');
         }
 
-        // 3. Update admin document (log last login)
+        // Log admin last login
         try {
           const adminRef = doc(db, 'admins', cred.user.uid);
           const adminSnap = await getDoc(adminRef);
 
           if (adminSnap.exists()) {
-            await updateDoc(adminRef, {
-              lastLogin: serverTimestamp()
-            });
+            await updateDoc(adminRef, { lastLogin: serverTimestamp() });
           } else {
-            // Create admin doc if doesn't exist (first login)
-            const { setDoc } = await import(
-              "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-            );
             await setDoc(adminRef, {
               email: cred.user.email,
               createdAt: serverTimestamp(),
@@ -132,11 +127,9 @@ if (isLoginPage) {
             });
           }
         } catch (logErr) {
-          // Don't block login if logging fails
           console.warn('Admin log update failed:', logErr);
         }
 
-        // 4. Success → redirect
         if (successEl) successEl.textContent = '✅ Login successful. Redirecting...';
 
         setTimeout(() => {
@@ -148,9 +141,6 @@ if (isLoginPage) {
         hideOverlay(loadingOverlay);
         setLoading(loginBtn, false, 'Sign In to Admin Panel');
 
-        /* --------------------------------------
-           FRIENDLY ERROR MESSAGES
-           -------------------------------------- */
         if (err.message === 'Admin access only') {
           if (errorEl) errorEl.textContent = '⛔ This account is not an admin.';
         } else if (
@@ -174,73 +164,118 @@ if (isLoginPage) {
     });
   }
 
-  /* --------------------------------------
-     AUTO REDIRECT IF ALREADY LOGGED IN
-     -------------------------------------- */
+  // Auto-redirect if already logged in as admin
   onAuthStateChanged(auth, (user) => {
     if (user && isAdminEmail(user.email)) {
       window.location.href = 'index.html';
     } else if (user && !isAdminEmail(user.email)) {
-      // Logged in but not admin — sign out
       signOut(auth);
     }
   });
 }
 
 /* ============================================
-   ADMIN PAGES — AUTH GUARD
+   ADMIN PAGES — LOGOUT + AUTH GUARD
    ============================================ */
 if (isAdminPage) {
 
+  console.log('[Auth] Admin page detected — setting up');
+
   /* --------------------------------------
-     SETUP LOGOUT BUTTON
+     LOGOUT BUTTON — Setup (multiple tries)
      -------------------------------------- */
-  const logoutBtn = document.getElementById('adminLogoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
+  let logoutBound = false;
+
+  function setupLogoutButton() {
+    if (logoutBound) return;
+
+    const logoutBtn = document.getElementById('adminLogoutBtn');
+    if (!logoutBtn) {
+      console.warn('[Auth] Logout button not found yet');
+      return;
+    }
+
+    logoutBound = true;
+    console.log('[Auth] Binding logout button');
+
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      console.log('[Auth] Logout clicked');
+
+      logoutBtn.disabled = true;
+
       try {
         await signOut(auth);
+        console.log('[Auth] Signed out, redirecting...');
         window.location.href = 'login.html';
       } catch (err) {
-        console.error('Logout error:', err);
-        alert('Logout failed. Please try again.');
+        console.error('[Auth] Logout error:', err);
+        alert('Logout failed: ' + err.message);
+        logoutBtn.disabled = false;
       }
     });
   }
+
+  // Try immediate
+  setupLogoutButton();
+
+  // Try on DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupLogoutButton);
+  }
+
+  // Try on window load
+  window.addEventListener('load', setupLogoutButton);
+
+  // Fallback: Event delegation on document (works even if button added later)
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('#adminLogoutBtn');
+    if (btn && !btn.dataset.delegatedBound) {
+      // Only use if not already bound normally
+      if (!logoutBound) {
+        btn.dataset.delegatedBound = '1';
+        console.log('[Auth] Logout via delegation');
+        btn.disabled = true;
+        signOut(auth).then(() => {
+          window.location.href = 'login.html';
+        }).catch((err) => {
+          console.error('[Auth] Delegated logout error:', err);
+          btn.disabled = false;
+        });
+      }
+    }
+  });
 
   /* --------------------------------------
      AUTH GUARD
      -------------------------------------- */
   onAuthStateChanged(auth, async (user) => {
-    // 1. No user → redirect to login
+    console.log('[Auth] State changed:', user ? user.email : 'no user');
+
     if (!user) {
+      console.log('[Auth] No user — redirect to login');
       window.location.href = 'login.html';
       return;
     }
 
-    // 2. Not admin → sign out + redirect
     if (!isAdminEmail(user.email)) {
+      console.warn('[Auth] Not admin — signing out');
       await signOut(auth);
       window.location.href = 'login.html';
       return;
     }
 
-    // 3. Update admin email display in navbar
+    // Update admin email in navbar
     const adminUserEl = document.getElementById('adminUserEmail');
     if (adminUserEl) {
       const spanEl = adminUserEl.querySelector('span');
-      if (spanEl) {
-        spanEl.textContent = user.email;
-      }
+      if (spanEl) spanEl.textContent = user.email;
     }
 
-    // 4. Update admin info in settings page (if present)
+    // Update admin info in settings
     const adminInfoEmail = document.getElementById('adminInfoEmail');
-    if (adminInfoEmail) {
-      adminInfoEmail.textContent = user.email;
-    }
+    if (adminInfoEmail) adminInfoEmail.textContent = user.email;
 
-    // 5. Update last login in settings page
     const adminInfoLastLogin = document.getElementById('adminInfoLastLogin');
     if (adminInfoLastLogin) {
       try {
@@ -265,37 +300,38 @@ if (isAdminPage) {
           adminInfoLastLogin.textContent = 'First session';
         }
       } catch (err) {
-        console.warn('Could not load last login:', err);
         adminInfoLastLogin.textContent = '—';
       }
     }
 
-    // 6. Dispatch custom event for page-specific scripts
-    //    (dashboard.js, users.js etc. will listen)
-    window.dispatchEvent(new CustomEvent('adminReady', {
-      detail: { user }
-    }));
+    // Dispatch adminReady event (with retries for late listeners)
+    console.log('[Auth] Dispatching adminReady');
+    const fireReady = () => {
+      window.dispatchEvent(new CustomEvent('adminReady', {
+        detail: { user }
+      }));
+    };
+
+    fireReady();
+    // Retry in case dashboard.js loaded after
+    setTimeout(fireReady, 100);
+    setTimeout(fireReady, 500);
   });
 }
 
 /* ============================================
    HELPERS
    ============================================ */
-
 function setLoading(btn, isLoading, text) {
   if (!btn) return;
-
   if (isLoading) {
     btn.disabled = true;
-    btn.dataset.originalText = btn.querySelector('span')?.textContent || '';
     const span = btn.querySelector('span');
     if (span) span.textContent = text || 'Loading...';
   } else {
     btn.disabled = false;
     const span = btn.querySelector('span');
-    if (span) {
-      span.textContent = text || btn.dataset.originalText || 'Submit';
-    }
+    if (span) span.textContent = text || 'Submit';
   }
 }
 
@@ -315,16 +351,14 @@ function hideOverlay(el) {
    IDLE AUTO LOGOUT (30 min)
    ============================================ */
 if (isAdminPage) {
-  const IDLE_LIMIT = 30 * 60 * 1000; // 30 minutes
+  const IDLE_LIMIT = 30 * 60 * 1000;
   let idleTimer;
 
   const resetIdle = () => {
     clearTimeout(idleTimer);
     idleTimer = setTimeout(async () => {
       alert('Session expired due to inactivity. Please login again.');
-      try {
-        await signOut(auth);
-      } catch (err) {}
+      try { await signOut(auth); } catch (err) {}
       window.location.href = 'login.html';
     }, IDLE_LIMIT);
   };
