@@ -1,6 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — WITHDRAWALS
    Approve / Reject + Filter + Real-time
+   v2 — Prevent duplicate setup + refund confirmation
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -21,8 +22,9 @@ import {
    ============================================ */
 let allWithdrawals = [];
 let currentFilter = 'pending';
-let pendingApprove = null;   // withdrawal being approved
-let pendingReject = null;    // withdrawal being rejected
+let pendingApprove = null;
+let pendingReject = null;
+let isSetupDone = false;
 
 /* ============================================
    DOM HELPERS
@@ -44,6 +46,10 @@ function formatDateTime(timestamp) {
   } catch {
     return '—';
   }
+}
+
+function formatNumber(num) {
+  return (Number(num) || 0).toLocaleString('en-IN');
 }
 
 function getMethodLabel(method) {
@@ -87,14 +93,12 @@ async function loadWithdrawals() {
   if (!listEl) return;
 
   try {
-    // Show loading
     listEl.innerHTML = `
       <div class="admin-empty-state">
         <div class="admin-mini-spinner"></div>
         <p>Loading withdrawals...</p>
       </div>`;
 
-    // Fetch all withdrawals
     const q = query(
       collection(db, 'withdrawals'),
       orderBy('createdAt', 'desc')
@@ -110,10 +114,7 @@ async function loadWithdrawals() {
       });
     });
 
-    // Update counts
     updateCounts();
-
-    // Render
     renderWithdrawals();
 
   } catch (err) {
@@ -144,7 +145,6 @@ function updateCounts() {
   if (cr) cr.textContent = rejected;
   if (cl) cl.textContent = all;
 
-  // Nav badge
   const badge = $('navPendingBadge');
   if (badge) {
     if (pending > 0) {
@@ -157,7 +157,7 @@ function updateCounts() {
 }
 
 /* ============================================
-   RENDER WITHDRAWALS (based on filter)
+   RENDER WITHDRAWALS
    ============================================ */
 function renderWithdrawals() {
   const listEl = $('withdrawalsList');
@@ -169,7 +169,6 @@ function renderWithdrawals() {
     filtered = allWithdrawals.filter(w => w.status === currentFilter);
   }
 
-  // Empty state
   if (filtered.length === 0) {
     const emptyMsg = currentFilter === 'pending'
       ? 'No pending withdrawals 🎉'
@@ -186,7 +185,6 @@ function renderWithdrawals() {
     return;
   }
 
-  // Render cards
   listEl.innerHTML = '';
   filtered.forEach((w) => {
     listEl.appendChild(createWithdrawalCard(w));
@@ -204,7 +202,6 @@ function createWithdrawalCard(w) {
   const methodLabel = getMethodLabel(w.method);
   const dateTime = formatDateTime(w.createdAt);
 
-  // Payment detail label/value
   let paymentLabel = 'UPI ID';
   let paymentValue = w.upiId || '—';
 
@@ -213,16 +210,15 @@ function createWithdrawalCard(w) {
     paymentValue = w.giftEmail || w.userEmail || '—';
   }
 
-  // Actions only for pending
   const actionsHTML = status === 'pending' ? `
     <div class="admin-wd-actions">
-      <button class="admin-wd-btn approve" data-action="approve" data-id="${w.id}">
+      <button class="admin-wd-btn approve" data-action="approve" data-id="${w.id}" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
         Approve
       </button>
-      <button class="admin-wd-btn reject" data-action="reject" data-id="${w.id}">
+      <button class="admin-wd-btn reject" data-action="reject" data-id="${w.id}" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/>
           <line x1="6" y1="6" x2="18" y2="18"/>
@@ -231,7 +227,6 @@ function createWithdrawalCard(w) {
       </button>
     </div>` : '';
 
-  // Proof display for approved/rejected
   let proofHTML = '';
   if (status === 'approved' && w.proof) {
     proofHTML = `
@@ -248,7 +243,7 @@ function createWithdrawalCard(w) {
   card.innerHTML = `
     <div class="admin-wd-header">
       <div class="admin-wd-user">
-        <div class="admin-wd-avatar">${getInitial(w.userName)}</div>
+        <div class="admin-wd-avatar">${escapeHtml(getInitial(w.userName))}</div>
         <div class="admin-wd-user-info">
           <div class="admin-wd-name">${escapeHtml(w.userName || 'User')}</div>
           <div class="admin-wd-email">${escapeHtml(w.userEmail || '—')}</div>
@@ -260,7 +255,7 @@ function createWithdrawalCard(w) {
     <div class="admin-wd-details">
       <div class="admin-wd-detail">
         <div class="admin-wd-detail-label">Coins</div>
-        <div class="admin-wd-detail-value">${Number(w.coins || 0).toLocaleString('en-IN')}</div>
+        <div class="admin-wd-detail-value">${formatNumber(w.coins)}</div>
       </div>
       <div class="admin-wd-detail">
         <div class="admin-wd-detail-label">Amount</div>
@@ -288,10 +283,13 @@ function createWithdrawalCard(w) {
 }
 
 /* ============================================
-   FILTER TABS
+   SETUP: FILTER TABS
    ============================================ */
 function setupFilterTabs() {
   document.querySelectorAll('.admin-filter-tab').forEach((tab) => {
+    if (tab.dataset.bound === '1') return;
+    tab.dataset.bound = '1';
+
     tab.addEventListener('click', () => {
       document.querySelectorAll('.admin-filter-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
@@ -302,12 +300,12 @@ function setupFilterTabs() {
 }
 
 /* ============================================
-   APPROVE / REJECT — CLICK HANDLERS
-   (Event delegation)
+   SETUP: CARD ACTIONS (Event Delegation)
    ============================================ */
 function setupCardActions() {
   const listEl = $('withdrawalsList');
-  if (!listEl) return;
+  if (!listEl || listEl.dataset.bound === '1') return;
+  listEl.dataset.bound = '1';
 
   listEl.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
@@ -336,7 +334,6 @@ function openApproveSheet(w) {
   const sheet = $('approveSheet');
   if (!sheet) return;
 
-  // Populate info
   const userEl = $('approveUser');
   const amountEl = $('approveAmount');
   const upiEl = $('approveUpi');
@@ -346,9 +343,8 @@ function openApproveSheet(w) {
   const proofLabel = $('approveProofLabel');
 
   if (userEl) userEl.textContent = w.userName || 'User';
-  if (amountEl) amountEl.textContent = `₹${w.amountINR || 0} (${Number(w.coins).toLocaleString('en-IN')} coins)`;
+  if (amountEl) amountEl.textContent = `₹${w.amountINR || 0} (${formatNumber(w.coins)} coins)`;
 
-  // Show appropriate row based on method
   if (w.method === 'upi') {
     if (upiRow) upiRow.classList.remove('hidden');
     if (emailRow) emailRow.classList.add('hidden');
@@ -361,14 +357,12 @@ function openApproveSheet(w) {
     if (proofLabel) proofLabel.innerHTML = 'Gift Card Code <span class="admin-required">*</span>';
   }
 
-  // Reset input
   const input = $('approveProofInput');
   if (input) input.value = '';
 
   const errEl = $('approveError');
   if (errEl) errEl.textContent = '';
 
-  // Show sheet
   sheet.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 
@@ -384,7 +378,8 @@ function closeApproveSheet() {
 
 function setupApproveSheet() {
   const sheet = $('approveSheet');
-  if (!sheet) return;
+  if (!sheet || sheet.dataset.bound === '1') return;
+  sheet.dataset.bound = '1';
 
   const closeBtn = $('approveSheetClose');
   const cancelBtn = $('approveCancelBtn');
@@ -392,23 +387,19 @@ function setupApproveSheet() {
   const input = $('approveProofInput');
   const errEl = $('approveError');
 
-  // Close handlers
   if (closeBtn) closeBtn.addEventListener('click', closeApproveSheet);
   if (cancelBtn) cancelBtn.addEventListener('click', closeApproveSheet);
 
-  // Click outside
   sheet.addEventListener('click', (e) => {
     if (e.target === sheet) closeApproveSheet();
   });
 
-  // Escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !sheet.classList.contains('hidden')) {
       closeApproveSheet();
     }
   });
 
-  // Confirm approve
   if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
       if (!pendingApprove) return;
@@ -425,7 +416,6 @@ function setupApproveSheet() {
 
       try {
         await runTransaction(db, async (tx) => {
-          // Update withdrawal
           const wRef = doc(db, 'withdrawals', w.id);
           const wSnap = await tx.get(wRef);
 
@@ -439,9 +429,6 @@ function setupApproveSheet() {
             proof: proof,
             processedAt: serverTimestamp()
           });
-
-          // Update user's totalWithdrawn (was already adjusted on request)
-          // Actually already deducted on submit; here just confirming
         });
 
         // Update transaction log
@@ -467,7 +454,6 @@ function setupApproveSheet() {
           console.warn('Transaction log update failed:', logErr);
         }
 
-        // Update local data
         const idx = allWithdrawals.findIndex(x => x.id === w.id);
         if (idx !== -1) {
           allWithdrawals[idx].status = 'approved';
@@ -479,7 +465,6 @@ function setupApproveSheet() {
         updateCounts();
         renderWithdrawals();
 
-        // Success message
         setTimeout(() => {
           alert(`✅ Withdrawal of ₹${w.amountINR} approved!`);
         }, 200);
@@ -516,7 +501,7 @@ function openRejectSheet(w) {
   const errEl = $('rejectError');
 
   if (userEl) userEl.textContent = w.userName || 'User';
-  if (amountEl) amountEl.textContent = `₹${w.amountINR || 0} (${Number(w.coins).toLocaleString('en-IN')} coins)`;
+  if (amountEl) amountEl.textContent = `₹${w.amountINR || 0} (${formatNumber(w.coins)} coins)`;
   if (input) input.value = '';
   if (errEl) errEl.textContent = '';
 
@@ -535,7 +520,8 @@ function closeRejectSheet() {
 
 function setupRejectSheet() {
   const sheet = $('rejectSheet');
-  if (!sheet) return;
+  if (!sheet || sheet.dataset.bound === '1') return;
+  sheet.dataset.bound = '1';
 
   const closeBtn = $('rejectSheetClose');
   const cancelBtn = $('rejectCancelBtn');
@@ -563,12 +549,20 @@ function setupRejectSheet() {
       const reason = (input?.value || '').trim() || 'Rejected by admin';
       const w = pendingReject;
 
+      // ✅ Confirm before refund
+      const confirmMsg =
+        `Reject this withdrawal?\n\n` +
+        `User: ${w.userName}\n` +
+        `Amount: ₹${w.amountINR} (${formatNumber(w.coins)} coins)\n\n` +
+        `⚠️ ${formatNumber(w.coins)} coins will be REFUNDED to user.`;
+
+      if (!window.confirm(confirmMsg)) return;
+
       confirmBtn.disabled = true;
       showLoading('Rejecting & refunding coins...');
 
       try {
         await runTransaction(db, async (tx) => {
-          // Get user ref
           const userRef = doc(db, 'users', w.userId);
           const userSnap = await tx.get(userRef);
 
@@ -576,7 +570,6 @@ function setupRejectSheet() {
 
           const uData = userSnap.data();
 
-          // Update withdrawal
           const wRef = doc(db, 'withdrawals', w.id);
           const wSnap = await tx.get(wRef);
 
@@ -591,7 +584,7 @@ function setupRejectSheet() {
             processedAt: serverTimestamp()
           });
 
-          // Refund coins
+          // ✅ REFUND coins to user
           tx.update(userRef, {
             coins: (Number(uData.coins) || 0) + Number(w.coins),
             totalWithdrawn: Math.max(0, (Number(uData.totalWithdrawn) || 0) - (Number(w.coins) / 100))
@@ -610,7 +603,7 @@ function setupRejectSheet() {
             createdAt: serverTimestamp()
           });
 
-          // Update original withdrawal transaction log
+          // Update original withdrawal transaction
           const tQuery = query(
             collection(db, 'transactions'),
             where('userId', '==', w.userId),
@@ -632,7 +625,6 @@ function setupRejectSheet() {
           console.warn('Transaction log update failed:', logErr);
         }
 
-        // Update local data
         const idx = allWithdrawals.findIndex(x => x.id === w.id);
         if (idx !== -1) {
           allWithdrawals[idx].status = 'rejected';
@@ -645,7 +637,7 @@ function setupRejectSheet() {
         renderWithdrawals();
 
         setTimeout(() => {
-          alert(`Withdrawal rejected. ${w.coins} coins refunded to user.`);
+          alert(`✅ Withdrawal rejected.\n${formatNumber(w.coins)} coins refunded to user.`);
         }, 200);
 
       } catch (err) {
@@ -666,30 +658,50 @@ function setupRejectSheet() {
 }
 
 /* ============================================
-   INIT AFTER AUTH
+   SETUP: REFRESH BUTTON
    ============================================ */
-window.addEventListener('adminReady', async () => {
-  console.log('Admin ready — loading withdrawals');
+function setupRefreshButton() {
+  const refreshBtn = $('refreshBtn');
+  if (!refreshBtn || refreshBtn.dataset.bound === '1') return;
+  refreshBtn.dataset.bound = '1';
+
+  refreshBtn.addEventListener('click', async () => {
+    refreshBtn.classList.add('spinning');
+    try {
+      await loadWithdrawals();
+    } finally {
+      setTimeout(() => {
+        refreshBtn.classList.remove('spinning');
+      }, 600);
+    }
+  });
+}
+
+/* ============================================
+   SETUP WITHDRAWALS PAGE (Once)
+   ============================================ */
+async function setupWithdrawals() {
+  if (isSetupDone) {
+    console.log('[Withdrawals] Already setup — skipping');
+    return;
+  }
+  isSetupDone = true;
+
+  console.log('[Withdrawals] Loading withdrawals...');
 
   setupFilterTabs();
   setupCardActions();
   setupApproveSheet();
   setupRejectSheet();
+  setupRefreshButton();
 
   await loadWithdrawals();
+}
 
-  /* ----- REFRESH BUTTON ----- */
-  const refreshBtn = $('refreshBtn');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', async () => {
-      refreshBtn.classList.add('spinning');
-      try {
-        await loadWithdrawals();
-      } finally {
-        setTimeout(() => {
-          refreshBtn.classList.remove('spinning');
-        }, 600);
-      }
-    });
-  }
+/* ============================================
+   INIT AFTER AUTH
+   ============================================ */
+window.addEventListener('adminReady', () => {
+  console.log('[Withdrawals] adminReady event received');
+  setupWithdrawals();
 });
