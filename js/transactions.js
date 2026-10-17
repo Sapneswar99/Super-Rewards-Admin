@@ -1,7 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — TRANSACTIONS
    All transactions + Search + Filter + Pagination
-   v2 — Prevent duplicate setup + cleanup
+   v3 — Fixed UID mapping & Vercel fields
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -69,11 +69,16 @@ function escapeHtml(str) {
    ============================================ */
 function getTxCategory(tx) {
   const type = (tx.type || '').toLowerCase();
+  const amount = Number(tx.amount) || 0;
 
   if (type.includes('withdrawal')) return 'withdrawal';
   if (type.includes('refund')) return 'refund';
   if (type.includes('admin')) return 'earned';
-  return 'earned'; // Offers, surveys, etc.
+  
+  // Vercel backend se aane wale transactions (CPX/Timewall) amount > 0 hote hain
+  if (amount > 0) return 'earned';
+  
+  return 'withdrawal'; // Fallback for negative amounts
 }
 
 function getTxIcon(tx) {
@@ -264,14 +269,16 @@ function applyFilters() {
     result = result.filter(tx => {
       const type = (tx.type || '').toLowerCase();
       const email = (tx.userEmail || '').toLowerCase();
-      const name = (tx.userName || '').toLowerCase();
+      // Vercel uses 'uid', Admin Panel might use 'userId'
+      const uid = (tx.uid || tx.userId || '').toLowerCase();
       const txId = (tx.id || '').toLowerCase();
-      const txIdRef = (tx.tx_id || '').toLowerCase();
+      // Vercel uses 'transId', Android might use 'tx_id'
+      const txIdRef = (tx.transId || tx.tx_id || '').toLowerCase();
       const proof = (tx.proof || '').toLowerCase();
 
       return type.includes(term) ||
              email.includes(term) ||
-             name.includes(term) ||
+             uid.includes(term) ||
              txId.includes(term) ||
              txIdRef.includes(term) ||
              proof.includes(term);
@@ -323,20 +330,22 @@ function createTxCard(tx) {
   const isPositive = amount > 0;
   const icon = getTxIcon(tx);
 
-  const status = (tx.status || 'pending').toLowerCase();
+  const status = (tx.status || 'PENDING').toLowerCase();
   const dateTime = formatDateTime(tx.createdAt);
-  const typeLabel = tx.type || 'Transaction';
+  
+  // Vercel backend "source" use karta hai (CPX_RESEARCH/TIMEWALL), app "type" use karta hai
+  const rawLabel = tx.source || tx.type || 'Transaction';
+  const typeLabel = rawLabel.replace(/_/g, ' '); 
 
-  let subInfo = '';
+  let subInfo = 'System';
   if (tx.userEmail) {
     subInfo = tx.userEmail;
-  } else if (tx.userId) {
-    subInfo = `User: ${tx.userId.slice(0, 12)}...`;
-  } else {
-    subInfo = 'System';
+  } else if (tx.uid || tx.userId) {
+    const idStr = tx.uid || tx.userId;
+    subInfo = `UID: ${idStr.slice(0, 12)}...`;
   }
 
-  const refLine = tx.tx_id || tx.proof || '';
+  const refLine = tx.transId || tx.tx_id || tx.proof || '';
   const showRef = refLine && refLine.length < 60;
 
   card.innerHTML = `
@@ -347,7 +356,7 @@ function createTxCard(tx) {
     </div>
 
     <div class="admin-tx-body">
-      <div class="admin-tx-title">${escapeHtml(typeLabel)}</div>
+      <div class="admin-tx-title" style="text-transform: capitalize;">${escapeHtml(typeLabel)}</div>
       <div class="admin-tx-sub">${escapeHtml(subInfo)}</div>
       ${showRef ? `<div class="admin-tx-sub" style="font-size:10px;opacity:0.7;margin-top:2px;">🔖 ${escapeHtml(refLine)}</div>` : ''}
     </div>
