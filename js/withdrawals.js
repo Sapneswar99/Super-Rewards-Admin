@@ -1,7 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — REDEMPTIONS
    Approve / Reject + Filter + Real-time
-   v3 — Fixed collection names, status cases, & fields
+   v4 — Fixed undefined userId/indexOf error & amount
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -52,7 +52,6 @@ function formatNumber(num) {
   return (Number(num) || 0).toLocaleString('en-IN');
 }
 
-// App UPPERCASE me method bhejta hai
 function getMethodLabel(method) {
   const m = String(method).toUpperCase();
   if (m === 'GOOGLE_PLAY') return 'Google Play';
@@ -101,7 +100,6 @@ async function loadWithdrawals() {
         <p>Loading redemptions...</p>
       </div>`;
 
-    // FIX: collection 'redemptions'
     const q = query(
       collection(db, 'redemptions'),
       orderBy('createdAt', 'desc')
@@ -205,7 +203,9 @@ function createWithdrawalCard(w) {
   const methodLabel = getMethodLabel(w.method);
   const dateTime = formatDateTime(w.createdAt);
 
-  // FIX: App fields (upiId, gpEmail, amazonContact)
+  // FIX: Amount calculate karo agar missing ho
+  const amountINR = w.amountINR || Math.floor((w.coins || 0) / 100);
+
   let paymentLabel = 'UPI ID';
   let paymentValue = w.upiId || '—';
 
@@ -217,8 +217,7 @@ function createWithdrawalCard(w) {
     paymentValue = w.amazonContact || '—';
   }
   
-  // Fallback for user details if not saved in redemption doc
-  const displayName = w.userName || w.userId || 'User';
+  const displayName = w.userName || w.userId || w.uid || 'User';
   const displayEmail = w.userEmail || '—';
 
   const actionsHTML = status === 'PENDING' ? `
@@ -270,7 +269,7 @@ function createWithdrawalCard(w) {
       </div>
       <div class="admin-wd-detail">
         <div class="admin-wd-detail-label">Amount</div>
-        <div class="admin-wd-detail-value amount">₹${w.amountINR || 0}</div>
+        <div class="admin-wd-detail-value amount">₹${amountINR}</div>
       </div>
       <div class="admin-wd-detail">
         <div class="admin-wd-detail-label">Method</div>
@@ -305,7 +304,6 @@ function setupFilterTabs() {
       document.querySelectorAll('.admin-filter-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       
-      // HTML me data-filter="pending" hoga, use capital me convert karenge
       const rawFilter = tab.dataset.filter;
       currentFilter = rawFilter.toUpperCase();
       
@@ -315,7 +313,7 @@ function setupFilterTabs() {
 }
 
 /* ============================================
-   SETUP: CARD ACTIONS (Event Delegation)
+   SETUP: CARD ACTIONS
    ============================================ */
 function setupCardActions() {
   const listEl = $('withdrawalsList');
@@ -357,8 +355,11 @@ function openApproveSheet(w) {
   const emailRow = $('approveEmailRow');
   const proofLabel = $('approveProofLabel');
 
-  if (userEl) userEl.textContent = w.userName || w.userId || 'User';
-  if (amountEl) amountEl.textContent = `₹${w.amountINR || 0} (${formatNumber(w.coins)} coins)`;
+  const displayName = w.userName || w.userId || w.uid || 'User';
+  const amountINR = w.amountINR || Math.floor((w.coins || 0) / 100);
+
+  if (userEl) userEl.textContent = displayName;
+  if (amountEl) amountEl.textContent = `₹${amountINR} (${formatNumber(w.coins)} coins)`;
 
   if (w.method === 'UPI') {
     if (upiRow) upiRow.classList.remove('hidden');
@@ -431,18 +432,18 @@ function setupApproveSheet() {
 
       try {
         await runTransaction(db, async (tx) => {
-          const wRef = doc(db, 'redemptions', w.id); // FIX
+          const wRef = doc(db, 'redemptions', w.id);
           const wSnap = await tx.get(wRef);
 
           if (!wSnap.exists()) throw new Error('Redemption not found');
-          if (wSnap.data().status !== 'PENDING') { // FIX
+          if (wSnap.data().status !== 'PENDING') {
             throw new Error('Already processed');
           }
 
           tx.update(wRef, {
-            status: 'PAID', // FIX
+            status: 'PAID',
             proof: proof,
-            utr: proof, // App rules me utr bhi hai
+            utr: proof,
             processedAt: serverTimestamp(),
             adminNote: 'Approved by Admin'
           });
@@ -460,7 +461,7 @@ function setupApproveSheet() {
         renderWithdrawals();
 
         setTimeout(() => {
-          alert(`✅ Redemption of ₹${w.amountINR} approved!`);
+          alert(`✅ Redemption approved!`);
         }, 200);
 
       } catch (err) {
@@ -494,8 +495,11 @@ function openRejectSheet(w) {
   const input = $('rejectReasonInput');
   const errEl = $('rejectError');
 
-  if (userEl) userEl.textContent = w.userName || w.userId || 'User';
-  if (amountEl) amountEl.textContent = `₹${w.amountINR || 0} (${formatNumber(w.coins)} coins)`;
+  const displayName = w.userName || w.userId || w.uid || 'User';
+  const amountINR = w.amountINR || Math.floor((w.coins || 0) / 100);
+
+  if (userEl) userEl.textContent = displayName;
+  if (amountEl) amountEl.textContent = `₹${amountINR} (${formatNumber(w.coins)} coins)`;
   if (input) input.value = '';
   if (errEl) errEl.textContent = '';
 
@@ -543,10 +547,17 @@ function setupRejectSheet() {
       const reason = (input?.value || '').trim() || 'Rejected by admin';
       const w = pendingReject;
 
+      // FIX: Ensure targetUid exists
+      const targetUid = w.userId || w.uid;
+      if (!targetUid) {
+        if (errEl) errEl.textContent = 'Error: User ID is missing in this request.';
+        return;
+      }
+
       const confirmMsg =
         `Reject this redemption?\n\n` +
-        `User: ${w.userName || w.userId}\n` +
-        `Amount: ₹${w.amountINR} (${formatNumber(w.coins)} coins)\n\n` +
+        `User: ${w.userName || targetUid}\n` +
+        `Amount: ₹${w.amountINR || Math.floor((w.coins || 0) / 100)}\n\n` +
         `⚠️ ${formatNumber(w.coins)} coins will be REFUNDED to user.`;
 
       if (!window.confirm(confirmMsg)) return;
@@ -556,23 +567,23 @@ function setupRejectSheet() {
 
       try {
         await runTransaction(db, async (tx) => {
-          const userRef = doc(db, 'users', w.userId);
+          const userRef = doc(db, 'users', targetUid); // FIX: Use targetUid
           const userSnap = await tx.get(userRef);
 
           if (!userSnap.exists()) throw new Error('User not found');
 
           const uData = userSnap.data();
 
-          const wRef = doc(db, 'redemptions', w.id); // FIX
+          const wRef = doc(db, 'redemptions', w.id);
           const wSnap = await tx.get(wRef);
 
           if (!wSnap.exists()) throw new Error('Redemption not found');
-          if (wSnap.data().status !== 'PENDING') { // FIX
+          if (wSnap.data().status !== 'PENDING') {
             throw new Error('Already processed');
           }
 
           tx.update(wRef, {
-            status: 'REJECTED', // FIX
+            status: 'REJECTED',
             proof: reason,
             adminNote: reason,
             processedAt: serverTimestamp()
@@ -580,18 +591,18 @@ function setupRejectSheet() {
 
           // ✅ REFUND coins
           tx.update(userRef, {
-            coins: (Number(uData.coins) || 0) + Number(w.coins),
-            pendingCoins: Math.max(0, (Number(uData.pendingCoins) || 0) - Number(w.coins))
+            coins: (Number(uData.coins) || 0) + Number(w.coins || 0),
+            pendingCoins: Math.max(0, (Number(uData.pendingCoins) || 0) - Number(w.coins || 0))
           });
         });
 
         // Create refund transaction log
         try {
           await addDoc(collection(db, 'transactions'), {
-            uid: w.userId, // FIX: app me uid use hota hai
+            uid: targetUid, // FIX: Use targetUid
             type: 'Refund (rejected)',
-            amount: Number(w.coins),
-            status: 'CREDIT',
+            amount: Number(w.coins || 0),
+            status: 'COMPLETED',
             reason: reason,
             processedAt: serverTimestamp(),
             createdAt: serverTimestamp()
