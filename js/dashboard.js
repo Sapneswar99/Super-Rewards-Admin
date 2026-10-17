@@ -1,7 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — DASHBOARD
    Stats + Recent Data + Pending Badge
-   v2 — Fixed auto-refresh leak + duplicate setup
+   v3 — Fixed collection names & status cases
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -22,10 +22,6 @@ const $ = (id) => document.getElementById(id);
 const setText = (id, value) => {
   const el = $(id);
   if (el) el.textContent = value;
-};
-const setHTML = (id, html) => {
-  const el = $(id);
-  if (el) el.innerHTML = html;
 };
 
 /* ============================================
@@ -53,9 +49,11 @@ function getInitial(name) {
   return (name || 'U').trim().charAt(0).toUpperCase() || 'U';
 }
 
+// App UPPERCASE me method bhejta hai (UPI, GOOGLE_PLAY, AMAZON_PAY)
 function getMethodLabel(method) {
-  if (method === 'googleplay') return 'Google Play';
-  if (method === 'amazon') return 'Amazon Pay';
+  const m = String(method).toUpperCase();
+  if (m === 'GOOGLE_PLAY') return 'Google Play';
+  if (m === 'AMAZON_PAY') return 'Amazon Pay';
   return 'UPI';
 }
 
@@ -85,10 +83,11 @@ async function loadStats() {
     const usersCountSnap = await getCountFromServer(usersColl);
     setText('statTotalUsers', formatNumber(usersCountSnap.data().count));
 
-    /* ----- 2. PENDING WITHDRAWALS ----- */
+    /* ----- 2. PENDING REDEMPTIONS ----- */
+    // FIX: 'withdrawals' -> 'redemptions', 'pending' -> 'PENDING'
     const pendingWQ = query(
-      collection(db, 'withdrawals'),
-      where('status', '==', 'pending')
+      collection(db, 'redemptions'),
+      where('status', '==', 'PENDING')
     );
     const pendingCountSnap = await getCountFromServer(pendingWQ);
     const pendingCount = pendingCountSnap.data().count;
@@ -105,10 +104,11 @@ async function loadStats() {
       }
     }
 
-    /* ----- 3. TOTAL PAID (approved withdrawals) ----- */
+    /* ----- 3. TOTAL PAID ----- */
+    // FIX: 'withdrawals' -> 'redemptions', 'approved' -> 'PAID'
     const approvedWQ = query(
-      collection(db, 'withdrawals'),
-      where('status', '==', 'approved')
+      collection(db, 'redemptions'),
+      where('status', '==', 'PAID')
     );
     const approvedSnap = await getDocs(approvedWQ);
 
@@ -120,8 +120,6 @@ async function loadStats() {
     setText('statTotalPaid', formatNumber(Math.floor(totalPaid)));
 
     /* ----- 4. COINS IN CIRCULATION ----- */
-    // ⚠️ NOTE: Reading all users directly can be expensive if user base is huge.
-    // For now, it works perfectly for small/medium scale.
     const allUsersSnap = await getDocs(usersColl);
     let totalCoins = 0;
     allUsersSnap.forEach((docSnap) => {
@@ -140,16 +138,17 @@ async function loadStats() {
 }
 
 /* ============================================
-   LOAD RECENT PENDING WITHDRAWALS
+   LOAD RECENT PENDING REDEMPTIONS
    ============================================ */
 async function loadRecentWithdrawals() {
   const tbody = $('recentWithdrawals');
   if (!tbody) return;
 
   try {
+    // FIX: 'withdrawals' -> 'redemptions', 'pending' -> 'PENDING'
     const q = query(
-      collection(db, 'withdrawals'),
-      where('status', '==', 'pending'),
+      collection(db, 'redemptions'),
+      where('status', '==', 'PENDING'),
       orderBy('createdAt', 'desc'),
       limit(5)
     );
@@ -161,7 +160,7 @@ async function loadRecentWithdrawals() {
       tbody.innerHTML = `
         <tr>
           <td colspan="5" style="text-align:center;color:#8b95a8;padding:32px;">
-            No pending withdrawals 🎉
+            No pending redemptions 🎉
           </td>
         </tr>`;
       return;
@@ -170,8 +169,11 @@ async function loadRecentWithdrawals() {
     snap.forEach((docSnap) => {
       const w = docSnap.data();
       const date = formatDate(w.createdAt);
-      const status = (w.status || 'pending').toLowerCase();
+      const status = (w.status || 'PENDING').toUpperCase();
       const methodLabel = getMethodLabel(w.method);
+      
+      // Kyunki redemption doc me shayad naam na ho, UID dikhayenge fallback ke liye
+      const displayName = w.userName || w.userId || 'User';
 
       const row = document.createElement('tr');
       row.innerHTML = `
@@ -179,24 +181,24 @@ async function loadRecentWithdrawals() {
         <td>
           <div style="display:flex;align-items:center;gap:8px;">
             <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;">
-              ${escapeHtml(getInitial(w.userName))}
+              ${escapeHtml(getInitial(displayName))}
             </div>
-            <span>${escapeHtml(w.userName || 'User')}</span>
+            <span>${escapeHtml(displayName)}</span>
           </div>
         </td>
         <td>${methodLabel}</td>
         <td><strong style="color:#a78bfa;">₹${w.amountINR || 0}</strong></td>
-        <td><span class="admin-wd-status ${status}">${status}</span></td>
+        <td><span class="admin-wd-status ${status.toLowerCase()}">${status}</span></td>
       `;
       tbody.appendChild(row);
     });
 
   } catch (err) {
-    console.error('Recent withdrawals load error:', err);
+    console.error('Recent redemptions load error:', err);
     tbody.innerHTML = `
       <tr>
         <td colspan="5" style="text-align:center;color:#8b95a8;padding:32px;">
-          Could not load withdrawals
+          Could not load redemptions
         </td>
       </tr>`;
   }
@@ -285,21 +287,15 @@ function stopAutoRefresh() {
 }
 
 /* ============================================
-   SETUP DASHBOARD (Called ONCE after auth)
+   SETUP DASHBOARD
    ============================================ */
 async function setupDashboard() {
-  if (isSetupDone) {
-    console.log('[Dashboard] Already setup — skipping');
-    return;
-  }
+  if (isSetupDone) return;
   isSetupDone = true;
 
   console.log('[Dashboard] Loading data...');
-
-  // Load all data
   await refreshAll();
 
-  /* ----- REFRESH BUTTON ----- */
   const refreshBtn = $('refreshBtn');
   if (refreshBtn && !refreshBtn.dataset.bound) {
     refreshBtn.dataset.bound = '1';
@@ -315,7 +311,6 @@ async function setupDashboard() {
     });
   }
 
-  /* ----- AUTO REFRESH EVERY 60s ----- */
   stopAutoRefresh();
   autoRefreshTimer = setInterval(() => {
     if (!document.hidden) {
@@ -338,7 +333,6 @@ window.addEventListener('adminReady', () => {
    ============================================ */
 window.addEventListener('beforeunload', stopAutoRefresh);
 
-// Stop auto-refresh if user logs out
 auth.onAuthStateChanged((user) => {
   if (!user) {
     stopAutoRefresh();
