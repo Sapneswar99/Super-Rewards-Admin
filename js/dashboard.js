@@ -120,6 +120,8 @@ async function loadStats() {
     setText('statTotalPaid', formatNumber(Math.floor(totalPaid)));
 
     /* ----- 4. COINS IN CIRCULATION ----- */
+    // ⚠️ NOTE: Reading all users directly can be expensive if user base is huge.
+    // For now, it works perfectly for small/medium scale.
     const allUsersSnap = await getDocs(usersColl);
     let totalCoins = 0;
     allUsersSnap.forEach((docSnap) => {
@@ -255,7 +257,8 @@ async function loadRecentUsers() {
       <tr>
         <td colspan="4" style="text-align:center;color:#8b95a8;padding:32px;">
           Could not load users
-        </tr>`;
+        </td>
+      </tr>`;
   }
 }
 
