@@ -1,7 +1,7 @@
 /* ============================================
-   SUPER REWARDS ADMIN — WITHDRAWALS
+   SUPER REWARDS ADMIN — REDEMPTIONS
    Approve / Reject + Filter + Real-time
-   v2 — Prevent duplicate setup + refund confirmation
+   v3 — Fixed collection names, status cases, & fields
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -21,7 +21,7 @@ import {
    STATE
    ============================================ */
 let allWithdrawals = [];
-let currentFilter = 'pending';
+let currentFilter = 'PENDING'; // App uses uppercase
 let pendingApprove = null;
 let pendingReject = null;
 let isSetupDone = false;
@@ -52,9 +52,11 @@ function formatNumber(num) {
   return (Number(num) || 0).toLocaleString('en-IN');
 }
 
+// App UPPERCASE me method bhejta hai
 function getMethodLabel(method) {
-  if (method === 'googleplay') return 'Google Play';
-  if (method === 'amazon') return 'Amazon Pay';
+  const m = String(method).toUpperCase();
+  if (m === 'GOOGLE_PLAY') return 'Google Play';
+  if (m === 'AMAZON_PAY') return 'Amazon Pay';
   return 'UPI';
 }
 
@@ -86,7 +88,7 @@ function hideLoading() {
 }
 
 /* ============================================
-   LOAD ALL WITHDRAWALS
+   LOAD ALL REDEMPTIONS
    ============================================ */
 async function loadWithdrawals() {
   const listEl = $('withdrawalsList');
@@ -96,11 +98,12 @@ async function loadWithdrawals() {
     listEl.innerHTML = `
       <div class="admin-empty-state">
         <div class="admin-mini-spinner"></div>
-        <p>Loading withdrawals...</p>
+        <p>Loading redemptions...</p>
       </div>`;
 
+    // FIX: collection 'redemptions'
     const q = query(
-      collection(db, 'withdrawals'),
+      collection(db, 'redemptions'),
       orderBy('createdAt', 'desc')
     );
 
@@ -118,10 +121,10 @@ async function loadWithdrawals() {
     renderWithdrawals();
 
   } catch (err) {
-    console.error('Withdrawals load error:', err);
+    console.error('Redemptions load error:', err);
     listEl.innerHTML = `
       <div class="admin-empty-state">
-        <p>Could not load withdrawals. Please refresh.</p>
+        <p>Could not load redemptions. Please refresh.</p>
       </div>`;
   }
 }
@@ -130,9 +133,9 @@ async function loadWithdrawals() {
    UPDATE FILTER COUNTS
    ============================================ */
 function updateCounts() {
-  const pending = allWithdrawals.filter(w => w.status === 'pending').length;
-  const approved = allWithdrawals.filter(w => w.status === 'approved').length;
-  const rejected = allWithdrawals.filter(w => w.status === 'rejected').length;
+  const pending = allWithdrawals.filter(w => w.status === 'PENDING').length;
+  const approved = allWithdrawals.filter(w => w.status === 'PAID').length;
+  const rejected = allWithdrawals.filter(w => w.status === 'REJECTED').length;
   const all = allWithdrawals.length;
 
   const cp = $('countPending');
@@ -157,7 +160,7 @@ function updateCounts() {
 }
 
 /* ============================================
-   RENDER WITHDRAWALS
+   RENDER REDEMPTIONS
    ============================================ */
 function renderWithdrawals() {
   const listEl = $('withdrawalsList');
@@ -165,14 +168,14 @@ function renderWithdrawals() {
 
   let filtered = allWithdrawals;
 
-  if (currentFilter !== 'all') {
+  if (currentFilter !== 'ALL') {
     filtered = allWithdrawals.filter(w => w.status === currentFilter);
   }
 
   if (filtered.length === 0) {
-    const emptyMsg = currentFilter === 'pending'
-      ? 'No pending withdrawals 🎉'
-      : `No ${currentFilter} withdrawals`;
+    const emptyMsg = currentFilter === 'PENDING'
+      ? 'No pending redemptions 🎉'
+      : `No ${currentFilter.toLowerCase()} redemptions`;
 
     listEl.innerHTML = `
       <div class="admin-empty-state">
@@ -192,25 +195,33 @@ function renderWithdrawals() {
 }
 
 /* ============================================
-   CREATE WITHDRAWAL CARD
+   CREATE REDEMPTION CARD
    ============================================ */
 function createWithdrawalCard(w) {
   const card = document.createElement('div');
   card.className = 'admin-wd-card';
 
-  const status = (w.status || 'pending').toLowerCase();
+  const status = (w.status || 'PENDING').toUpperCase();
   const methodLabel = getMethodLabel(w.method);
   const dateTime = formatDateTime(w.createdAt);
 
+  // FIX: App fields (upiId, gpEmail, amazonContact)
   let paymentLabel = 'UPI ID';
   let paymentValue = w.upiId || '—';
 
-  if (w.method === 'googleplay' || w.method === 'amazon') {
+  if (w.method === 'GOOGLE_PLAY') {
     paymentLabel = 'Email';
-    paymentValue = w.giftEmail || w.userEmail || '—';
+    paymentValue = w.gpEmail || '—';
+  } else if (w.method === 'AMAZON_PAY') {
+    paymentLabel = 'Contact';
+    paymentValue = w.amazonContact || '—';
   }
+  
+  // Fallback for user details if not saved in redemption doc
+  const displayName = w.userName || w.userId || 'User';
+  const displayEmail = w.userEmail || '—';
 
-  const actionsHTML = status === 'pending' ? `
+  const actionsHTML = status === 'PENDING' ? `
     <div class="admin-wd-actions">
       <button class="admin-wd-btn approve" data-action="approve" data-id="${w.id}" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -228,12 +239,12 @@ function createWithdrawalCard(w) {
     </div>` : '';
 
   let proofHTML = '';
-  if (status === 'approved' && w.proof) {
+  if (status === 'PAID' && w.proof) {
     proofHTML = `
       <div style="margin-bottom:12px;padding:10px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;font-size:12px;color:#10b981;">
-        <strong style="opacity:0.75;">UTR:</strong> ${escapeHtml(w.proof)}
+        <strong style="opacity:0.75;">UTR / Code:</strong> ${escapeHtml(w.proof)}
       </div>`;
-  } else if (status === 'rejected' && w.proof) {
+  } else if (status === 'REJECTED' && w.proof) {
     proofHTML = `
       <div style="margin-bottom:12px;padding:10px 14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;font-size:12px;color:#ef4444;">
         <strong style="opacity:0.75;">Reason:</strong> ${escapeHtml(w.proof)}
@@ -243,13 +254,13 @@ function createWithdrawalCard(w) {
   card.innerHTML = `
     <div class="admin-wd-header">
       <div class="admin-wd-user">
-        <div class="admin-wd-avatar">${escapeHtml(getInitial(w.userName))}</div>
+        <div class="admin-wd-avatar">${escapeHtml(getInitial(displayName))}</div>
         <div class="admin-wd-user-info">
-          <div class="admin-wd-name">${escapeHtml(w.userName || 'User')}</div>
-          <div class="admin-wd-email">${escapeHtml(w.userEmail || '—')}</div>
+          <div class="admin-wd-name">${escapeHtml(displayName)}</div>
+          <div class="admin-wd-email">${escapeHtml(displayEmail)}</div>
         </div>
       </div>
-      <span class="admin-wd-status ${status}">${status}</span>
+      <span class="admin-wd-status ${status.toLowerCase()}">${status}</span>
     </div>
 
     <div class="admin-wd-details">
@@ -293,7 +304,11 @@ function setupFilterTabs() {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.admin-filter-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      currentFilter = tab.dataset.filter;
+      
+      // HTML me data-filter="pending" hoga, use capital me convert karenge
+      const rawFilter = tab.dataset.filter;
+      currentFilter = rawFilter.toUpperCase();
+      
       renderWithdrawals();
     });
   });
@@ -342,10 +357,10 @@ function openApproveSheet(w) {
   const emailRow = $('approveEmailRow');
   const proofLabel = $('approveProofLabel');
 
-  if (userEl) userEl.textContent = w.userName || 'User';
+  if (userEl) userEl.textContent = w.userName || w.userId || 'User';
   if (amountEl) amountEl.textContent = `₹${w.amountINR || 0} (${formatNumber(w.coins)} coins)`;
 
-  if (w.method === 'upi') {
+  if (w.method === 'UPI') {
     if (upiRow) upiRow.classList.remove('hidden');
     if (emailRow) emailRow.classList.add('hidden');
     if (upiEl) upiEl.textContent = w.upiId || '—';
@@ -353,7 +368,7 @@ function openApproveSheet(w) {
   } else {
     if (upiRow) upiRow.classList.add('hidden');
     if (emailRow) emailRow.classList.remove('hidden');
-    if (emailEl) emailEl.textContent = w.giftEmail || w.userEmail || '—';
+    if (emailEl) emailEl.textContent = w.method === 'GOOGLE_PLAY' ? (w.gpEmail || '—') : (w.amazonContact || '—');
     if (proofLabel) proofLabel.innerHTML = 'Gift Card Code <span class="admin-required">*</span>';
   }
 
@@ -412,51 +427,30 @@ function setupApproveSheet() {
 
       const w = pendingApprove;
       confirmBtn.disabled = true;
-      showLoading('Approving withdrawal...');
+      showLoading('Approving redemption...');
 
       try {
         await runTransaction(db, async (tx) => {
-          const wRef = doc(db, 'withdrawals', w.id);
+          const wRef = doc(db, 'redemptions', w.id); // FIX
           const wSnap = await tx.get(wRef);
 
-          if (!wSnap.exists()) throw new Error('Withdrawal not found');
-          if (wSnap.data().status !== 'pending') {
+          if (!wSnap.exists()) throw new Error('Redemption not found');
+          if (wSnap.data().status !== 'PENDING') { // FIX
             throw new Error('Already processed');
           }
 
           tx.update(wRef, {
-            status: 'approved',
+            status: 'PAID', // FIX
             proof: proof,
-            processedAt: serverTimestamp()
+            utr: proof, // App rules me utr bhi hai
+            processedAt: serverTimestamp(),
+            adminNote: 'Approved by Admin'
           });
         });
 
-        // Update transaction log
-        try {
-          const tQuery = query(
-            collection(db, 'transactions'),
-            where('userId', '==', w.userId),
-            where('amount', '==', -Number(w.coins)),
-            where('status', '==', 'pending')
-          );
-          const tSnap = await getDocs(tQuery);
-          for (const t of tSnap.docs) {
-            await runTransaction(db, async (tx) => {
-              tx.update(doc(db, 'transactions', t.id), {
-                status: 'approved',
-                proof: proof,
-                processedAt: serverTimestamp()
-              });
-            });
-            break;
-          }
-        } catch (logErr) {
-          console.warn('Transaction log update failed:', logErr);
-        }
-
         const idx = allWithdrawals.findIndex(x => x.id === w.id);
         if (idx !== -1) {
-          allWithdrawals[idx].status = 'approved';
+          allWithdrawals[idx].status = 'PAID';
           allWithdrawals[idx].proof = proof;
         }
 
@@ -466,7 +460,7 @@ function setupApproveSheet() {
         renderWithdrawals();
 
         setTimeout(() => {
-          alert(`✅ Withdrawal of ₹${w.amountINR} approved!`);
+          alert(`✅ Redemption of ₹${w.amountINR} approved!`);
         }, 200);
 
       } catch (err) {
@@ -476,7 +470,7 @@ function setupApproveSheet() {
 
         if (errEl) {
           if (err.message === 'Already processed') {
-            errEl.textContent = 'This withdrawal was already processed.';
+            errEl.textContent = 'This redemption was already processed.';
           } else {
             errEl.textContent = err.message || 'Approve failed. Try again.';
           }
@@ -500,7 +494,7 @@ function openRejectSheet(w) {
   const input = $('rejectReasonInput');
   const errEl = $('rejectError');
 
-  if (userEl) userEl.textContent = w.userName || 'User';
+  if (userEl) userEl.textContent = w.userName || w.userId || 'User';
   if (amountEl) amountEl.textContent = `₹${w.amountINR || 0} (${formatNumber(w.coins)} coins)`;
   if (input) input.value = '';
   if (errEl) errEl.textContent = '';
@@ -549,10 +543,9 @@ function setupRejectSheet() {
       const reason = (input?.value || '').trim() || 'Rejected by admin';
       const w = pendingReject;
 
-      // ✅ Confirm before refund
       const confirmMsg =
-        `Reject this withdrawal?\n\n` +
-        `User: ${w.userName}\n` +
+        `Reject this redemption?\n\n` +
+        `User: ${w.userName || w.userId}\n` +
         `Amount: ₹${w.amountINR} (${formatNumber(w.coins)} coins)\n\n` +
         `⚠️ ${formatNumber(w.coins)} coins will be REFUNDED to user.`;
 
@@ -570,64 +563,46 @@ function setupRejectSheet() {
 
           const uData = userSnap.data();
 
-          const wRef = doc(db, 'withdrawals', w.id);
+          const wRef = doc(db, 'redemptions', w.id); // FIX
           const wSnap = await tx.get(wRef);
 
-          if (!wSnap.exists()) throw new Error('Withdrawal not found');
-          if (wSnap.data().status !== 'pending') {
+          if (!wSnap.exists()) throw new Error('Redemption not found');
+          if (wSnap.data().status !== 'PENDING') { // FIX
             throw new Error('Already processed');
           }
 
           tx.update(wRef, {
-            status: 'rejected',
+            status: 'REJECTED', // FIX
             proof: reason,
+            adminNote: reason,
             processedAt: serverTimestamp()
           });
 
-          // ✅ REFUND coins to user
+          // ✅ REFUND coins
           tx.update(userRef, {
             coins: (Number(uData.coins) || 0) + Number(w.coins),
-            totalWithdrawn: Math.max(0, (Number(uData.totalWithdrawn) || 0) - (Number(w.coins) / 100))
+            pendingCoins: Math.max(0, (Number(uData.pendingCoins) || 0) - Number(w.coins))
           });
         });
 
         // Create refund transaction log
         try {
           await addDoc(collection(db, 'transactions'), {
-            userId: w.userId,
-            type: 'Refund (rejected withdrawal)',
+            uid: w.userId, // FIX: app me uid use hota hai
+            type: 'Refund (rejected)',
             amount: Number(w.coins),
-            status: 'credited',
+            status: 'CREDIT',
             reason: reason,
             processedAt: serverTimestamp(),
             createdAt: serverTimestamp()
           });
-
-          // Update original withdrawal transaction
-          const tQuery = query(
-            collection(db, 'transactions'),
-            where('userId', '==', w.userId),
-            where('amount', '==', -Number(w.coins)),
-            where('status', '==', 'pending')
-          );
-          const tSnap = await getDocs(tQuery);
-          for (const t of tSnap.docs) {
-            await runTransaction(db, async (tx) => {
-              tx.update(doc(db, 'transactions', t.id), {
-                status: 'rejected',
-                proof: reason,
-                processedAt: serverTimestamp()
-              });
-            });
-            break;
-          }
         } catch (logErr) {
           console.warn('Transaction log update failed:', logErr);
         }
 
         const idx = allWithdrawals.findIndex(x => x.id === w.id);
         if (idx !== -1) {
-          allWithdrawals[idx].status = 'rejected';
+          allWithdrawals[idx].status = 'REJECTED';
           allWithdrawals[idx].proof = reason;
         }
 
@@ -637,7 +612,7 @@ function setupRejectSheet() {
         renderWithdrawals();
 
         setTimeout(() => {
-          alert(`✅ Withdrawal rejected.\n${formatNumber(w.coins)} coins refunded to user.`);
+          alert(`✅ Redemption rejected.\n${formatNumber(w.coins)} coins refunded.`);
         }, 200);
 
       } catch (err) {
@@ -647,7 +622,7 @@ function setupRejectSheet() {
 
         if (errEl) {
           if (err.message === 'Already processed') {
-            errEl.textContent = 'This withdrawal was already processed.';
+            errEl.textContent = 'This redemption was already processed.';
           } else {
             errEl.textContent = err.message || 'Reject failed. Try again.';
           }
@@ -678,16 +653,16 @@ function setupRefreshButton() {
 }
 
 /* ============================================
-   SETUP WITHDRAWALS PAGE (Once)
+   SETUP REDEMPTIONS PAGE (Once)
    ============================================ */
 async function setupWithdrawals() {
   if (isSetupDone) {
-    console.log('[Withdrawals] Already setup — skipping');
+    console.log('[Redemptions] Already setup — skipping');
     return;
   }
   isSetupDone = true;
 
-  console.log('[Withdrawals] Loading withdrawals...');
+  console.log('[Redemptions] Loading redemptions...');
 
   setupFilterTabs();
   setupCardActions();
@@ -702,6 +677,6 @@ async function setupWithdrawals() {
    INIT AFTER AUTH
    ============================================ */
 window.addEventListener('adminReady', () => {
-  console.log('[Withdrawals] adminReady event received');
+  console.log('[Redemptions] adminReady event received');
   setupWithdrawals();
 });
