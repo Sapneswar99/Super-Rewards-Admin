@@ -1,7 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — USERS
    Search + Filter + User Details + Coins + Ban
-   v2 — Prevent duplicate setup + cleanup
+   v3 — Fixed transaction field names (uid)
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -164,12 +164,7 @@ function applyFilters() {
     result = result.filter(u => {
       const name = (u.name || '').toLowerCase();
       const email = (u.email || '').toLowerCase();
-      const phone = (u.phone || '').toLowerCase();
-      const upi = (u.upi || '').toLowerCase();
-      return name.includes(term) ||
-             email.includes(term) ||
-             phone.includes(term) ||
-             upi.includes(term);
+      return name.includes(term) || email.includes(term);
     });
   }
 
@@ -330,8 +325,10 @@ function openUserSheet(u) {
   const withdrawnEl = $('sheetUserWithdrawn');
   const joinedEl = $('sheetUserJoined');
 
+  // App me phone aur upi direct user me nahi hote, par agar future me hon toh show hoga
   if (phoneEl) phoneEl.textContent = u.phone || '—';
-  if (upiEl) upiEl.textContent = u.upi || '—';
+  if (upiEl) upiEl.textContent = u.upiId || '—';
+  
   if (coinsEl) coinsEl.textContent = formatNumber(u.coins);
   if (earnedEl) earnedEl.textContent = formatNumber(u.totalEarned);
   if (withdrawnEl) withdrawnEl.textContent = '₹' + (Number(u.totalWithdrawn) || 0);
@@ -520,7 +517,8 @@ function setupCoinsSheet() {
           tx.update(userRef, {
             coins: newValue,
             ...(coinsAction === 'add' ? {
-              totalEarned: (Number(uData.totalEarned) || 0) + amount
+              totalEarned: (Number(uData.totalEarned) || 0) + amount,
+              lifetimeCoins: (Number(uData.lifetimeCoins) || 0) + amount
             } : {})
           });
         });
@@ -529,10 +527,10 @@ function setupCoinsSheet() {
         try {
           const delta = coinsAction === 'add' ? amount : (newTotal - currentCoins);
           await addDoc(collection(db, 'transactions'), {
-            userId: u.id,
-            type: coinsAction === 'add' ? 'Admin Credit' : 'Admin Set',
+            uid: u.id, // ✅ FIX: userId ki jagah uid
+            type: coinsAction === 'add' ? 'ADMIN_CREDIT' : 'ADMIN_SET',
             amount: delta,
-            status: 'credited',
+            status: 'COMPLETED',
             createdAt: serverTimestamp(),
             note: coinsAction === 'add'
               ? `Admin added ${formatNumber(amount)} coins`
@@ -548,6 +546,7 @@ function setupCoinsSheet() {
           allUsers[idx].coins = newTotal;
           if (coinsAction === 'add') {
             allUsers[idx].totalEarned = (Number(allUsers[idx].totalEarned) || 0) + amount;
+            allUsers[idx].lifetimeCoins = (Number(allUsers[idx].lifetimeCoins) || 0) + amount;
           }
           selectedUser = allUsers[idx];
         }
