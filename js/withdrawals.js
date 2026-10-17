@@ -1,7 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — REDEMPTIONS
    Approve / Reject + Filter + Real-time
-   v4 — Fixed undefined userId/indexOf error & amount
+   v5 — Added Request ID & Copy Button
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -21,7 +21,7 @@ import {
    STATE
    ============================================ */
 let allWithdrawals = [];
-let currentFilter = 'PENDING'; // App uses uppercase
+let currentFilter = 'PENDING'; 
 let pendingApprove = null;
 let pendingReject = null;
 let isSetupDone = false;
@@ -203,7 +203,6 @@ function createWithdrawalCard(w) {
   const methodLabel = getMethodLabel(w.method);
   const dateTime = formatDateTime(w.createdAt);
 
-  // FIX: Amount calculate karo agar missing ho
   const amountINR = w.amountINR || Math.floor((w.coins || 0) / 100);
 
   let paymentLabel = 'UPI ID';
@@ -250,6 +249,19 @@ function createWithdrawalCard(w) {
       </div>`;
   }
 
+  // ✅ NAYA: Request ID aur Copy Button
+  const reqIdHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 8px; margin-bottom: 16px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1);">
+      <div style="font-size: 11px; color: #8b95a8;">
+        REQ ID: <span style="font-family: monospace; color:#cbd5e1;">${w.id}</span>
+      </div>
+      <button data-action="copy-id" data-id="${w.id}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span class="copy-text">Copy ID</span>
+      </button>
+    </div>
+  `;
+
   card.innerHTML = `
     <div class="admin-wd-header">
       <div class="admin-wd-user">
@@ -285,6 +297,7 @@ function createWithdrawalCard(w) {
       </div>
     </div>
 
+    ${reqIdHTML}
     ${proofHTML}
     ${actionsHTML}
   `;
@@ -313,7 +326,7 @@ function setupFilterTabs() {
 }
 
 /* ============================================
-   SETUP: CARD ACTIONS
+   SETUP: CARD ACTIONS (Approve/Reject/Copy)
    ============================================ */
 function setupCardActions() {
   const listEl = $('withdrawalsList');
@@ -321,11 +334,37 @@ function setupCardActions() {
   listEl.dataset.bound = '1';
 
   listEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
+    // Check if clicked inside the Copy button
+    const copyBtn = e.target.closest('[data-action="copy-id"]');
+    if (copyBtn) {
+      const idToCopy = copyBtn.dataset.id;
+      navigator.clipboard.writeText(idToCopy).then(() => {
+        const textSpan = copyBtn.querySelector('.copy-text');
+        const originalText = textSpan.textContent;
+        textSpan.textContent = 'Copied!';
+        copyBtn.style.background = 'rgba(16,185,129,0.2)';
+        copyBtn.style.color = '#10b981';
+        copyBtn.style.borderColor = 'rgba(16,185,129,0.3)';
+        
+        setTimeout(() => {
+          textSpan.textContent = originalText;
+          copyBtn.style.background = 'rgba(255,255,255,0.05)';
+          copyBtn.style.color = '#cbd5e1';
+          copyBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+        alert('Failed to copy ID. Please select manually.');
+      });
+      return; // Stop here so it doesn't trigger approve/reject
+    }
 
-    const action = btn.dataset.action;
-    const id = btn.dataset.id;
+    // Check if clicked Approve or Reject
+    const actionBtn = e.target.closest('[data-action="approve"], [data-action="reject"]');
+    if (!actionBtn) return;
+
+    const action = actionBtn.dataset.action;
+    const id = actionBtn.dataset.id;
 
     const w = allWithdrawals.find(item => item.id === id);
     if (!w) return;
@@ -547,7 +586,6 @@ function setupRejectSheet() {
       const reason = (input?.value || '').trim() || 'Rejected by admin';
       const w = pendingReject;
 
-      // FIX: Ensure targetUid exists
       const targetUid = w.userId || w.uid;
       if (!targetUid) {
         if (errEl) errEl.textContent = 'Error: User ID is missing in this request.';
@@ -567,7 +605,7 @@ function setupRejectSheet() {
 
       try {
         await runTransaction(db, async (tx) => {
-          const userRef = doc(db, 'users', targetUid); // FIX: Use targetUid
+          const userRef = doc(db, 'users', targetUid);
           const userSnap = await tx.get(userRef);
 
           if (!userSnap.exists()) throw new Error('User not found');
@@ -589,17 +627,15 @@ function setupRejectSheet() {
             processedAt: serverTimestamp()
           });
 
-          // ✅ REFUND coins
           tx.update(userRef, {
             coins: (Number(uData.coins) || 0) + Number(w.coins || 0),
             pendingCoins: Math.max(0, (Number(uData.pendingCoins) || 0) - Number(w.coins || 0))
           });
         });
 
-        // Create refund transaction log
         try {
           await addDoc(collection(db, 'transactions'), {
-            uid: targetUid, // FIX: Use targetUid
+            uid: targetUid,
             type: 'Refund (rejected)',
             amount: Number(w.coins || 0),
             status: 'COMPLETED',
