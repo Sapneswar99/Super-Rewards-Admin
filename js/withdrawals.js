@@ -1,7 +1,7 @@
 /* ============================================
    SUPER REWARDS ADMIN — REDEMPTIONS
    Approve / Reject + Filter + Real-time
-   v6 — Copy Payment Detail (UPI/Email) & Field Fixes
+   v7 — Smart Field Detection & Copy Payment Details
    ============================================ */
 
 import { auth, db } from './firebase-config.js';
@@ -84,6 +84,41 @@ function showLoading(text) {
 function hideLoading() {
   const el = $('adminLoading');
   if (el) el.classList.add('hidden');
+}
+
+/* ============================================
+   SMART PAYMENT DETAIL EXTRACTOR
+   ============================================ */
+function getPaymentDetails(w) {
+  const method = String(w.method || '').toUpperCase();
+  let label = 'UPI ID';
+  let value = '—';
+
+  if (method === 'GOOGLE_PLAY') {
+    label = 'Gmail';
+    value = w.gpEmail || w.email || w.accountDetails || w.targetAccount || w.paymentDetail || w.details || w.upiId || '—';
+  } else if (method === 'AMAZON_PAY') {
+    label = 'Contact';
+    value = w.amazonContact || w.contact || w.phone || w.accountDetails || w.targetAccount || w.paymentDetail || w.details || '—';
+  } else {
+    // UPI Default
+    label = 'UPI ID';
+    value = w.upiId || w.upi || w.accountDetails || w.targetAccount || w.paymentDetail || w.details || '—';
+  }
+
+  // Fallback: Agar koi bhi field na mile, toh document me search karo ki koi '@' wali string hai kya
+  if (value === '—') {
+    for (const key in w) {
+      if (typeof w[key] === 'string' && (w[key].includes('@') || w[key].length > 5 && key !== 'id' && key !== 'status' && key !== 'adminNote' && key !== 'proof')) {
+        if (w[key].includes('@')) {
+          value = w[key];
+          break;
+        }
+      }
+    }
+  }
+
+  return { label, value };
 }
 
 /* ============================================
@@ -202,33 +237,24 @@ function createWithdrawalCard(w) {
   const status = (w.status || 'PENDING').toUpperCase();
   const methodLabel = getMethodLabel(w.method);
   const dateTime = formatDateTime(w.createdAt);
-
   const amountINR = w.amountINR || Math.floor((w.coins || 0) / 100);
 
-  // ✅ FIX: Alag-alag fields check karo jo app me use ho rahi hongi
-  let paymentLabel = 'UPI ID';
-  let paymentValue = w.upiId || w.accountDetails || w.targetAccount || w.upi || '—';
-
-  if (w.method === 'GOOGLE_PLAY') {
-    paymentLabel = 'Email';
-    paymentValue = w.gpEmail || w.email || w.accountDetails || w.targetAccount || '—';
-  } else if (w.method === 'AMAZON_PAY') {
-    paymentLabel = 'Contact';
-    paymentValue = w.amazonContact || w.contact || w.accountDetails || w.targetAccount || '—';
-  }
+  // ✅ Use Smart Payment Extractor
+  const { label: paymentLabel, value: paymentValue } = getPaymentDetails(w);
   
   const displayName = w.userName || w.userId || w.uid || 'User';
   const displayEmail = w.userEmail || '—';
 
-  // ✅ NAYA: Payment Detail Copy Button
+  // ✅ Payment Detail with Copy Button
   const paymentHTML = `
     <div class="admin-wd-detail">
       <div class="admin-wd-detail-label">${paymentLabel}</div>
       <div class="admin-wd-detail-value" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-        <span style="word-break: break-all;">${escapeHtml(paymentValue)}</span>
+        <span style="word-break: break-all; font-weight: 600; color: #e2e8f0;">${escapeHtml(paymentValue)}</span>
         ${paymentValue !== '—' ? `
-          <button data-action="copy-payment" data-value="${escapeHtml(paymentValue)}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; border-radius: 6px; padding: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0;" title="Copy">
+          <button data-action="copy-payment" data-value="${escapeHtml(paymentValue)}" style="background: rgba(124, 58, 237, 0.15); border: 1px solid rgba(124, 58, 237, 0.3); color: #a78bfa; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; flex-shrink: 0; font-size: 11px; font-weight: 600;" title="Copy">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span class="copy-text">COPY</span>
           </button>
         ` : ''}
       </div>
@@ -291,7 +317,7 @@ function createWithdrawalCard(w) {
         <div class="admin-wd-detail-value">${methodLabel}</div>
       </div>
       
-      ${paymentHTML} <!-- Yahan Copy button wali payment detail aayegi -->
+      ${paymentHTML}
       
       <div class="admin-wd-detail" style="grid-column:1/-1;">
         <div class="admin-wd-detail-label">Requested</div>
@@ -335,22 +361,24 @@ function setupCardActions() {
   listEl.dataset.bound = '1';
 
   listEl.addEventListener('click', (e) => {
-    // ✅ NAYA: Payment Detail (UPI/Email) Copy Handler
+    // ✅ Copy Handler
     const copyBtn = e.target.closest('[data-action="copy-payment"]');
     if (copyBtn) {
       const valueToCopy = copyBtn.dataset.value;
       navigator.clipboard.writeText(valueToCopy).then(() => {
-        const originalHTML = copyBtn.innerHTML;
-        copyBtn.innerHTML = '✅';
+        const textSpan = copyBtn.querySelector('.copy-text');
+        const originalText = textSpan ? textSpan.textContent : '';
+        
+        if (textSpan) textSpan.textContent = 'COPIED!';
         copyBtn.style.background = 'rgba(16,185,129,0.2)';
         copyBtn.style.color = '#10b981';
         copyBtn.style.borderColor = 'rgba(16,185,129,0.3)';
         
         setTimeout(() => {
-          copyBtn.innerHTML = originalHTML;
-          copyBtn.style.background = 'rgba(255,255,255,0.05)';
-          copyBtn.style.color = '#cbd5e1';
-          copyBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+          if (textSpan) textSpan.textContent = originalText;
+          copyBtn.style.background = 'rgba(124, 58, 237, 0.15)';
+          copyBtn.style.color = '#a78bfa';
+          copyBtn.style.borderColor = 'rgba(124, 58, 237, 0.3)';
         }, 2000);
       }).catch(err => {
         console.error('Failed to copy: ', err);
@@ -396,6 +424,8 @@ function openApproveSheet(w) {
 
   const displayName = w.userName || w.userId || w.uid || 'User';
   const amountINR = w.amountINR || Math.floor((w.coins || 0) / 100);
+  
+  const { value: paymentValue } = getPaymentDetails(w);
 
   if (userEl) userEl.textContent = displayName;
   if (amountEl) amountEl.textContent = `₹${amountINR} (${formatNumber(w.coins)} coins)`;
@@ -403,12 +433,12 @@ function openApproveSheet(w) {
   if (w.method === 'UPI') {
     if (upiRow) upiRow.classList.remove('hidden');
     if (emailRow) emailRow.classList.add('hidden');
-    if (upiEl) upiEl.textContent = w.upiId || w.accountDetails || w.targetAccount || '—';
+    if (upiEl) upiEl.textContent = paymentValue;
     if (proofLabel) proofLabel.innerHTML = 'UTR / Transaction ID <span class="admin-required">*</span>';
   } else {
     if (upiRow) upiRow.classList.add('hidden');
     if (emailRow) emailRow.classList.remove('hidden');
-    if (emailEl) emailEl.textContent = w.method === 'GOOGLE_PLAY' ? (w.gpEmail || w.accountDetails || '—') : (w.amazonContact || w.accountDetails || '—');
+    if (emailEl) emailEl.textContent = paymentValue;
     if (proofLabel) proofLabel.innerHTML = 'Gift Card Code <span class="admin-required">*</span>';
   }
 
