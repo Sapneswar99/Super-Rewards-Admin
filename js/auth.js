@@ -3,7 +3,7 @@
    Robust page detection + logout + auth guard
    ============================================ */
 
-import { auth, db, ADMIN_EMAILS, isAdminEmail } from './firebase-config.js';
+import { auth, db, isAdminEmail } from './firebase-config.js';
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
