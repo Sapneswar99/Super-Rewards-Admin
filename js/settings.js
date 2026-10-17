@@ -312,6 +312,9 @@ async function signOutAllDevices() {
   showLoading('Signing out from all devices...');
 
   try {
+    // Note: Firebase standard signOut only logs out current device.
+    // To log out from ALL devices, you need Admin SDK (Cloud Functions).
+    // For this frontend panel, this will safely log out the current session.
     await signOut(auth);
     hideLoading();
 
